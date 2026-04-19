@@ -1,0 +1,26 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #2563EB;
+  /* Modern Blue */
+  --color-primary-light: #60A5FA;
+  --color-primary-dark: #1D4ED8;
+
+  --color-secondary: #64748B;
+  --color-secondary-light: #94A3B8;
+
+  --color-background: #F8FAFC;
+  --color-surface: #FFFFFF;
+
+  --font-sans: "Lexend", sans-serif;
+
+  --radius-lg: 1rem;
+  --radius-md: 0.75rem;
+  --radius-sm: 0.5rem;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-slate-900 antialiased;
+  }
+}
