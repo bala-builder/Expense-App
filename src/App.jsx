@@ -12,6 +12,7 @@ import GroupDetails from './pages/GroupDetails'
 import Groups from './pages/Groups'
 import Activity from './pages/Activity'
 import Friends from './pages/Friends'
+import ImportData from './pages/ImportData'
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/verify-email" element={<VerifyEmail />} />
+          {import.meta.env.DEV && <Route path="/import" element={<ImportData />} />}
 
           {/* Protected Routes */}
           <Route element={<Layout />}>

@@ -56,6 +56,11 @@ export default function Layout() {
                         <Link to="/friends" className="text-sm font-medium text-slate-600 hover:text-primary">
                             Friends
                         </Link>
+                        {import.meta.env.DEV && (
+                            <Link to="/import" className="text-sm font-medium text-slate-600 hover:text-primary">
+                                Import Data
+                            </Link>
+                        )}
                     </nav>
 
                     <div className="relative">
@@ -128,6 +133,15 @@ export default function Layout() {
                                 >
                                     Activity
                                 </Link>
+                                {import.meta.env.DEV && (
+                                    <Link
+                                        to="/import"
+                                        className="text-sm font-medium text-slate-600 hover:text-primary py-2"
+                                        onClick={() => setIsMobileMenuOpen(false)}
+                                    >
+                                        Import Data
+                                    </Link>
+                                )}
                             </nav>
                             <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
                                 <div className="flex items-center gap-2 text-sm font-medium text-slate-700">

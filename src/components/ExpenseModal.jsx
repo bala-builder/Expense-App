@@ -161,7 +161,7 @@ export default function ExpenseModal({ isOpen, onClose, groupId, members, expens
                         />
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-4">
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-slate-700">Amount & Currency</label>
                             <div className="flex gap-2">
@@ -324,7 +324,7 @@ export default function ExpenseModal({ isOpen, onClose, groupId, members, expens
                         ) : <div></div>}
                         <div className="flex gap-2">
                             <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-                            <Button type="submit">{expenseToEdit ? 'Save Changes' : 'Add Expense'}</Button>
+                            <Button type="submit">Save</Button>
                         </div>
                     </div>
                 </form>

@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus, Users, ArrowUpRight, ArrowDownLeft } from 'lucide-react'
+import { Plus, Users, ArrowUpRight, ArrowDownLeft, Search } from 'lucide-react'
 import { Button } from '../components/ui/button'
+import { Input } from '../components/ui/input'
 import { useApp } from '../context/AppContext'
 import CreateGroupModal from '../components/CreateGroupModal'
 import ExpenseModal from '../components/ExpenseModal'
@@ -14,8 +15,14 @@ export default function Dashboard() {
     const [isSelectGroupOpen, setIsSelectGroupOpen] = useState(false)
     const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false)
     const [selectedGroup, setSelectedGroup] = useState(null)
+    const [searchQuery, setSearchQuery] = useState('')
 
     const balance = getUserBalance()
+
+    const filteredGroups = useMemo(() => {
+        if (!searchQuery.trim()) return groups
+        return groups.filter(g => g.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    }, [groups, searchQuery])
 
     const handleAddExpenseClick = () => {
         if (groups.length === 0) {
@@ -62,17 +69,25 @@ export default function Dashboard() {
 
             {/* Recent Groups */}
             <div>
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
                     <h2 className="text-lg font-semibold text-slate-900">Your Groups</h2>
-                    <Button variant="ghost" className="text-primary">View All</Button>
+                    <div className="relative w-full sm:w-64">
+                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                        <Input
+                            placeholder="Search groups..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="pl-9"
+                        />
+                    </div>
                 </div>
-                {groups.length === 0 ? (
+                {filteredGroups.length === 0 ? (
                     <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-200">
-                        <p className="text-secondary">No groups yet. Create one to get started!</p>
+                        <p className="text-secondary">{searchQuery ? "No groups found matching your search." : "No groups yet. Create one to get started!"}</p>
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {groups.map((group) => (
+                        {filteredGroups.map((group) => (
                             <Link key={group.id} to={`/groups/${group.id}`}>
                                 <div className="bg-surface p-6 rounded-2xl shadow-sm border border-slate-100 transition-all duration-200 hover:shadow-md hover:-translate-y-1 cursor-pointer">
                                     <div className="flex items-center justify-between mb-4">

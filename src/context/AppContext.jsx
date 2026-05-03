@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react'
 import firebase from 'firebase/compat/app'
 import { auth, db, googleProvider } from '../lib/firebase'
 
@@ -20,19 +20,16 @@ export function AppProvider({ children }) {
         return () => unsubscribe()
     }, [])
 
-    // Data Listener
+    // 1. Groups Listener
     useEffect(() => {
         if (!user) {
             setGroups([])
-            setExpenses([])
             return
         }
 
-        // 1. Groups
         const unsubGroups = db.collection('groups')
             .where('members', 'array-contains', user.uid)
             .onSnapshot(snapshot => {
-                console.log("Groups snapshot update, docs:", snapshot.docs.length)
                 const groupList = snapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
@@ -42,56 +39,94 @@ export function AppProvider({ children }) {
                 console.error("Error fetching groups:", error)
             })
 
-        // 2. Expenses
-        const unsubExpenses = db.collection('expenses')
-            .onSnapshot(snapshot => {
-                const allExpenses = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data()
-                }))
-                setExpenses(allExpenses)
-            })
+        return () => unsubGroups()
+    }, [user])
 
-        // 3. Users
-        const unsubUsers = db.collection('users')
-            .onSnapshot(snapshot => {
-                const map = {}
-                snapshot.forEach(doc => {
-                    map[doc.id] = { id: doc.id, ...doc.data() }
-                })
-                setUsersMap(map)
-            })
+    const chunkArray = (arr, size) => arr.length ? [arr.slice(0, size), ...chunkArray(arr.slice(size), size)] : [];
 
-        // 4. Check for invites automatically
-        if (user.email) {
-            db.collection('groups')
-                .where('memberEmails', 'array-contains', user.email)
-                .get()
-                .then(snapshot => {
-                    snapshot.docs.forEach(doc => {
-                        const data = doc.data()
-                        if (!data.members.includes(user.uid)) {
-                            console.log("Auto-joining group from invite:", doc.id)
-                            db.collection('groups').doc(doc.id).update({
-                                members: firebase.firestore.FieldValue.arrayUnion(user.uid)
-                            })
+    // 2. Expenses Listener (Optimized)
+    const groupIdsString = useMemo(() => groups.map(g => g.id).sort().join(','), [groups]);
+
+    useEffect(() => {
+        if (!user || !groupIdsString) {
+            setExpenses([])
+            return
+        }
+
+        const groupIds = groupIdsString.split(',');
+        const chunks = chunkArray(groupIds, 10);
+        const expensesMap = new Map();
+
+        const unsubs = chunks.map(chunk => {
+            return db.collection('expenses')
+                .where('groupId', 'in', chunk)
+                .onSnapshot(snapshot => {
+                    snapshot.docChanges().forEach(change => {
+                        if (change.type === 'removed') {
+                            expensesMap.delete(change.doc.id);
+                        } else {
+                            expensesMap.set(change.doc.id, { id: change.doc.id, ...change.doc.data() });
                         }
-                    })
+                    });
+                    setExpenses(Array.from(expensesMap.values()));
                 })
-                .catch(err => console.error("Error checking invites:", err))
+        });
+
+        return () => unsubs.forEach(unsub => unsub())
+    }, [user, groupIdsString])
+
+    // 3. Users Listener (Optimized)
+    const userIdsString = useMemo(() => {
+        const uids = new Set();
+        if (user) uids.add(user.uid);
+        groups.forEach(g => {
+            if (g.members) g.members.forEach(uid => uids.add(uid));
+        });
+        return Array.from(uids).sort().join(',');
+    }, [groups, user]);
+
+    useEffect(() => {
+        if (!user || !userIdsString) {
+            setUsersMap({})
+            return
         }
 
-        // DEBUG: Fetch all groups to see if any exist
-        db.collection('groups').get().then(snap => {
-            console.log("DEBUG: Total groups in DB (no filter):", snap.size)
-            snap.docs.forEach(d => console.log("Group:", d.id, d.data()))
-        }).catch(e => console.error("DEBUG: Failed to list groups", e))
+        const userIds = userIdsString.split(',');
+        const chunks = chunkArray(userIds, 10);
+        const map = new Map();
 
-        return () => {
-            unsubGroups()
-            unsubExpenses()
-            unsubUsers()
-        }
+        const unsubs = chunks.map(chunk => {
+            return db.collection('users')
+                .where(firebase.firestore.FieldPath.documentId(), 'in', chunk)
+                .onSnapshot(snapshot => {
+                    snapshot.docs.forEach(doc => {
+                        map.set(doc.id, { id: doc.id, ...doc.data() });
+                    });
+                    setUsersMap(Object.fromEntries(map));
+                })
+        });
+
+        return () => unsubs.forEach(unsub => unsub())
+    }, [user, userIdsString])
+
+    useEffect(() => {
+        if (!user || !user.email) return;
+
+        db.collection('groups')
+            .where('memberEmails', 'array-contains', user.email)
+            .get()
+            .then(snapshot => {
+                snapshot.docs.forEach(doc => {
+                    const data = doc.data()
+                    if (!data.members.includes(user.uid)) {
+                        console.log("Auto-joining group from invite:", doc.id)
+                        db.collection('groups').doc(doc.id).update({
+                            members: firebase.firestore.FieldValue.arrayUnion(user.uid)
+                        })
+                    }
+                })
+            })
+            .catch(err => console.error("Error checking invites:", err))
     }, [user])
 
     // Actions
@@ -139,6 +174,15 @@ export function AppProvider({ children }) {
                     photoURL: user.photoURL,
                     createdAt: new Date()
                 })
+            } else {
+                // If the user changed their Google email, sync it to our database
+                const existingData = userDoc.data();
+                if (existingData.email !== user.email) {
+                    await db.collection('users').doc(user.uid).update({ 
+                        email: user.email 
+                    });
+                    console.log("Synced new email address to profile");
+                }
             }
             return user
         } catch (error) {
@@ -394,15 +438,12 @@ export function AppProvider({ children }) {
         }))
     }
 
-    const getUserBalance = () => {
+    const calculateBalance = (expensesList) => {
         if (!user) return 0
         let totalPaid = 0
         let totalShare = 0
 
-        expenses.forEach(expense => {
-            const group = groups.find(g => g.id === expense.groupId)
-            if (!group) return
-
+        expensesList.forEach(expense => {
             if (expense.paidBy === user.uid) {
                 totalPaid += expense.amount
             }
@@ -418,28 +459,9 @@ export function AppProvider({ children }) {
         return totalPaid - totalShare
     }
 
-    const getGroupUserBalance = (groupId) => {
-        if (!user) return 0
-        let totalPaid = 0
-        let totalShare = 0
+    const getUserBalance = () => calculateBalance(expenses)
 
-        const groupExpenses = expenses.filter(e => e.groupId === groupId)
-
-        groupExpenses.forEach(expense => {
-            if (expense.paidBy === user.uid) {
-                totalPaid += expense.amount
-            }
-            if (Array.isArray(expense.splitAmong) && expense.splitAmong.includes(user.uid)) {
-                if (expense.splitType === 'percentage' && expense.splitDetails) {
-                    const percentage = expense.splitDetails[user.uid] || 0
-                    totalShare += (expense.amount * percentage) / 100
-                } else {
-                    totalShare += (expense.amount / expense.splitAmong.length)
-                }
-            }
-        })
-        return totalPaid - totalShare
-    }
+    const getGroupUserBalance = (groupId) => calculateBalance(expenses.filter(e => e.groupId === groupId))
 
     const getFriends = () => {
         if (!user) return []
