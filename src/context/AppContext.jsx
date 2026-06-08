@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react'
 import firebase from 'firebase/compat/app'
 import { auth, db, googleProvider } from '../lib/firebase'
+import { registerForPushNotifications, onForegroundMessage } from '../lib/notifications'
 
 const AppContext = createContext()
 
@@ -19,6 +20,23 @@ export function AppProvider({ children }) {
         })
         return () => unsubscribe()
     }, [])
+
+    // Register for push notifications when user logs in
+    useEffect(() => {
+        if (!user) return
+        registerForPushNotifications(user.uid)
+
+        const unsubForeground = onForegroundMessage((payload) => {
+            const { title, body } = payload.notification || {}
+            if (title && 'Notification' in window && Notification.permission === 'granted') {
+                new Notification(title, {
+                    body: body || '',
+                    icon: '/logo.png'
+                })
+            }
+        })
+        return () => unsubForeground()
+    }, [user])
 
     // 1. Groups Listener
     useEffect(() => {
