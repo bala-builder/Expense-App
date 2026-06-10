@@ -3,7 +3,7 @@ const admin = require('firebase-admin');
 
 admin.initializeApp();
 
-exports.notifyOnExpenseCreated = functions.firestore
+exports.onExpenseCreated = functions.firestore
     .document('expenses/{expenseId}')
     .onCreate(async (snap, context) => {
         const expense = snap.data();

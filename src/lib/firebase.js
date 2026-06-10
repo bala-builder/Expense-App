@@ -19,6 +19,14 @@ export const auth = app.auth();
 export const db = app.firestore();
 export const googleProvider = new firebase.auth.GoogleAuthProvider();
 
-export const messaging = firebase.messaging.isSupported() ? app.messaging() : null;
+let messagingInstance = null;
+try {
+    if (typeof window !== 'undefined' && firebase.messaging.isSupported()) {
+        messagingInstance = app.messaging();
+    }
+} catch (e) {
+    console.log('FCM not available:', e.message);
+}
+export const messaging = messagingInstance;
 
 export default app;

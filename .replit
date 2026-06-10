@@ -39,12 +39,28 @@ localPort = 8009
 externalPort = 3001
 
 [[ports]]
+localPort = 8021
+externalPort = 8099
+
+[[ports]]
 localPort = 8217
 externalPort = 5000
 
 [[ports]]
+localPort = 8286
+externalPort = 9000
+
+[[ports]]
 localPort = 8338
 externalPort = 4200
+
+[[ports]]
+localPort = 8418
+externalPort = 6000
+
+[[ports]]
+localPort = 8419
+externalPort = 8008
 
 [[ports]]
 localPort = 8456
@@ -55,8 +71,28 @@ localPort = 8495
 externalPort = 3002
 
 [[ports]]
+localPort = 8561
+externalPort = 8000
+
+[[ports]]
+localPort = 8619
+externalPort = 8081
+
+[[ports]]
+localPort = 8675
+externalPort = 3000
+
+[[ports]]
 localPort = 8723
 externalPort = 5173
+
+[[ports]]
+localPort = 8787
+externalPort = 8080
+
+[[ports]]
+localPort = 8818
+externalPort = 6800
 
 [deployment]
 deploymentTarget = "static"
