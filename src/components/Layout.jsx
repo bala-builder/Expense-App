@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react'
 import { Outlet, Link, useLocation, Navigate } from 'react-router-dom'
-import { LogOut, User, Menu, Bell, BellOff, BellRing, X } from 'lucide-react'
+import { LogOut, User, Menu, Bell, BellOff, BellRing, X, CheckCircle2, AlertCircle } from 'lucide-react'
 import { Button } from './ui/button'
 import { useApp } from '../context/AppContext'
 import { getNotificationStatus, registerForPushNotifications } from '../lib/notifications'
 import Login from '../pages/Login'
-
-const BANNER_DISMISSED_KEY = 'notif_banner_dismissed'
 
 export default function Layout() {
     const { user, logout } = useApp()
@@ -14,9 +12,10 @@ export default function Layout() {
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
     const [notifStatus, setNotifStatus] = useState(null)
     const [enablingNotif, setEnablingNotif] = useState(false)
-    const [bannerDismissed, setBannerDismissed] = useState(
-        () => localStorage.getItem(BANNER_DISMISSED_KEY) === 'true'
-    )
+    const [bannerState, setBannerState] = useState('idle') // idle | loading | success | error
+    const [bannerError, setBannerError] = useState('')
+    // Only hide the banner for this session if dismissed — reshow on reload until actually granted
+    const [sessionDismissed, setSessionDismissed] = useState(false)
     const location = useLocation()
 
     useEffect(() => {
@@ -24,20 +23,29 @@ export default function Layout() {
     }, [])
 
     const handleEnableNotifications = async () => {
-        setEnablingNotif(true)
-        const success = await registerForPushNotifications(user.uid)
-        const status = await getNotificationStatus()
-        setNotifStatus(status)
-        setEnablingNotif(false)
-        if (success) dismissBanner()
+        setBannerState('loading')
+        setBannerError('')
+        try {
+            const success = await registerForPushNotifications(user.uid)
+            const status = await getNotificationStatus()
+            setNotifStatus(status)
+            if (success && status === 'granted') {
+                setBannerState('success')
+                setTimeout(() => setSessionDismissed(true), 2000)
+            } else if (status === 'denied') {
+                setBannerState('error')
+                setBannerError('Permission was denied. See instructions below.')
+            } else {
+                setBannerState('error')
+                setBannerError('Could not register — try reloading the page and tapping Enable again.')
+            }
+        } catch (e) {
+            setBannerState('error')
+            setBannerError(e.message || 'Something went wrong.')
+        }
     }
 
-    const dismissBanner = () => {
-        localStorage.setItem(BANNER_DISMISSED_KEY, 'true')
-        setBannerDismissed(true)
-    }
-
-    const showBanner = !bannerDismissed && (notifStatus === 'default' || notifStatus === 'denied')
+    const showBanner = !sessionDismissed && notifStatus !== null && notifStatus !== 'granted' && notifStatus !== 'unsupported'
 
     if (!user) return <Login />
     if (!user.emailVerified) return <Navigate to="/verify-email" />
@@ -154,29 +162,54 @@ export default function Layout() {
 
             {/* Notification permission banner */}
             {showBanner && (
-                <div className={`w-full px-4 py-3 flex items-center justify-between gap-3 text-sm ${notifStatus === 'denied' ? 'bg-slate-100 text-slate-600' : 'bg-primary text-white'}`}>
-                    <div className="flex items-center gap-2 flex-1 min-w-0">
-                        <Bell size={16} className="shrink-0" />
-                        {notifStatus === 'denied' ? (
-                            <span>Notifications are blocked. In Chrome, tap the lock icon in the address bar → <strong>Site settings</strong> → <strong>Notifications</strong> → Allow, then reload.</span>
-                        ) : (
-                            <span>Enable notifications to get alerted when expenses are added.</span>
-                        )}
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                        {notifStatus === 'default' && (
-                            <button
-                                onClick={handleEnableNotifications}
-                                disabled={enablingNotif}
-                                className="font-semibold underline underline-offset-2 disabled:opacity-60 whitespace-nowrap"
-                            >
-                                {enablingNotif ? 'Enabling…' : 'Enable'}
-                            </button>
-                        )}
-                        <button onClick={dismissBanner} className="opacity-70 hover:opacity-100 p-0.5" aria-label="Dismiss">
-                            <X size={16} />
-                        </button>
-                    </div>
+                <div className={`w-full px-4 py-3 text-sm ${
+                    bannerState === 'success' ? 'bg-green-600 text-white' :
+                    bannerState === 'error' || notifStatus === 'denied' ? 'bg-amber-50 border-b border-amber-200 text-amber-800' :
+                    'bg-primary text-white'
+                }`}>
+                    {bannerState === 'success' ? (
+                        <div className="flex items-center gap-2">
+                            <CheckCircle2 size={16} className="shrink-0" />
+                            <span className="font-medium">Notifications enabled! You'll be alerted when expenses are added.</span>
+                        </div>
+                    ) : bannerState === 'error' || notifStatus === 'denied' ? (
+                        <div className="space-y-1">
+                            <div className="flex items-start justify-between gap-3">
+                                <div className="flex items-start gap-2">
+                                    <AlertCircle size={16} className="shrink-0 mt-0.5" />
+                                    <div>
+                                        <p className="font-medium">Notifications are blocked</p>
+                                        {bannerError && <p className="text-xs mt-0.5 opacity-80">{bannerError}</p>}
+                                        <p className="text-xs mt-1 opacity-80">
+                                            On your phone: open Chrome → tap the <strong>lock icon</strong> in the address bar → <strong>Site settings</strong> → <strong>Notifications</strong> → <strong>Allow</strong>. Then reload this page.
+                                        </p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setSessionDismissed(true)} className="shrink-0 opacity-60 hover:opacity-100 p-0.5">
+                                    <X size={16} />
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-2 flex-1 min-w-0">
+                                <Bell size={16} className="shrink-0" />
+                                <span>Enable notifications to get alerted when expenses are added.</span>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                                <button
+                                    onClick={handleEnableNotifications}
+                                    disabled={bannerState === 'loading'}
+                                    className="font-semibold underline underline-offset-2 disabled:opacity-60 whitespace-nowrap"
+                                >
+                                    {bannerState === 'loading' ? 'Enabling…' : 'Enable'}
+                                </button>
+                                <button onClick={() => setSessionDismissed(true)} className="opacity-70 hover:opacity-100 p-0.5">
+                                    <X size={16} />
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
 
