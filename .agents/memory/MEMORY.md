@@ -1,0 +1,1 @@
+- [Replit lockfile proxy issue](replit-lockfile-proxy.md) — never include package-lock.json or yarn.lock when deploying Firebase Functions from Replit; lockfiles embed Replit's local npm proxy and break Cloud Build.
