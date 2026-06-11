@@ -21,10 +21,14 @@ export function AppProvider({ children }) {
         return () => unsubscribe()
     }, [])
 
-    // Register for push notifications when user logs in
+    // Register for push notifications when user logs in.
+    // Only auto-call if permission is already granted — mobile Chrome silently
+    // ignores requestPermission() without a real user gesture (tap).
     useEffect(() => {
         if (!user) return
-        registerForPushNotifications(user.uid)
+        if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            registerForPushNotifications(user.uid)
+        }
 
         const unsubForeground = onForegroundMessage((payload) => {
             const { title, body } = payload.notification || {}
