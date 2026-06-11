@@ -1,15 +1,30 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Outlet, Link, useLocation, Navigate } from 'react-router-dom'
-import { LogOut, User, Menu, Users } from 'lucide-react'
+import { LogOut, User, Menu, Bell, BellOff, BellRing } from 'lucide-react'
 import { Button } from './ui/button'
 import { useApp } from '../context/AppContext'
+import { getNotificationStatus, registerForPushNotifications } from '../lib/notifications'
 import Login from '../pages/Login'
 
 export default function Layout() {
     const { user, logout } = useApp()
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false)
+    const [notifStatus, setNotifStatus] = useState(null)
+    const [enablingNotif, setEnablingNotif] = useState(false)
     const location = useLocation()
+
+    useEffect(() => {
+        getNotificationStatus().then(setNotifStatus)
+    }, [])
+
+    const handleEnableNotifications = async () => {
+        setEnablingNotif(true)
+        await registerForPushNotifications(user.uid)
+        const status = await getNotificationStatus()
+        setNotifStatus(status)
+        setEnablingNotif(false)
+    }
 
     // Close mobile menu when route changes
     if (isMobileMenuOpen && location.pathname) {
@@ -86,6 +101,26 @@ export default function Layout() {
                                         <p className="text-xs text-slate-500 truncate" title={user.email}>{user.email}</p>
                                     </div>
                                     <div className="py-1">
+                                        {notifStatus === 'granted' ? (
+                                            <div className="px-4 py-2 text-sm text-green-600 flex items-center gap-2">
+                                                <BellRing size={16} />
+                                                Notifications on
+                                            </div>
+                                        ) : notifStatus === 'denied' ? (
+                                            <div className="px-4 py-2 text-sm text-slate-400 flex items-center gap-2">
+                                                <BellOff size={16} />
+                                                Notifications blocked
+                                            </div>
+                                        ) : notifStatus === 'unsupported' ? null : (
+                                            <button
+                                                onClick={handleEnableNotifications}
+                                                disabled={enablingNotif}
+                                                className="w-full text-left px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 flex items-center gap-2 disabled:opacity-50"
+                                            >
+                                                <Bell size={16} />
+                                                {enablingNotif ? 'Enabling...' : 'Enable notifications'}
+                                            </button>
+                                        )}
                                         <button
                                             onClick={logout}
                                             className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-slate-50 flex items-center gap-2"
