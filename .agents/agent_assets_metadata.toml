@@ -1,0 +1,20 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "ZCqoxTq2-p3sJDWyh-6Hc"
+uri = "file://mobile/assets/images/icon.png"
+type = "image"
+title = "trackcents app icon"
+
+[[generated]]
+id = "a46f8yicLY0I-gRek3Pj2"
+uri = "file://mobile/assets/images/splash.png"
+type = "image"
+title = "trackcents splash"
+
+[[generated]]
+id = "pngfKg5QMZMTKlzlpODe5"
+uri = "file://mobile/assets/images/adaptive-icon.png"
+type = "image"
+title = "trackcents adaptive icon"
