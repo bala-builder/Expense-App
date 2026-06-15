@@ -1,7 +1,9 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { initializeAuth, getAuth } from "firebase/auth";
-// @ts-ignore — getReactNativePersistence is in the RN bundle of firebase/auth
-import { getReactNativePersistence } from "firebase/auth/react-native";
+// getReactNativePersistence exists in Metro's RN resolution of firebase/auth
+// but is absent from the web TypeScript types, so we require() it to bypass tsc
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const { getReactNativePersistence } = require("firebase/auth");
 import { getFirestore } from "firebase/firestore";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 

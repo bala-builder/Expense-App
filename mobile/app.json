@@ -18,6 +18,7 @@
         "backgroundColor": "#2563EB"
       },
       "package": "com.trackcents.mobile",
+      "googleServicesFile": "./google-services.json",
       "permissions": [
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.VIBRATE",
@@ -39,6 +40,14 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "bbb89946-a05c-4a44-8fad-9d57231a6ffa"
+      }
     }
   }
 }
