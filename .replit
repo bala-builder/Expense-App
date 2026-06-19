@@ -38,13 +38,14 @@ outputType = "webview"
 [[workflows.workflow]]
 name = "Start Frontend"
 author = "agent"
-
-[workflows.workflow.metadata]
-outputType = "console"
+mode = "sequential"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd mobile && npx expo start --port 8081 --tunnel"
+
+[workflows.workflow.metadata]
+outputType = "console"
 
 [[ports]]
 localPort = 5000
