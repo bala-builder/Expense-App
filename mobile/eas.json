@@ -9,6 +9,7 @@
         "buildType": "apk"
       },
       "env": {
+        "EAS_BUILD_SKIP_LOCKFILE_CHECK": "1",
         "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyDQ_Bb0BWjuhs4VegadT_QWxeWaenw2NKg",
         "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "my-first-project-fd8f6.firebaseapp.com",
         "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "my-first-project-fd8f6",
@@ -23,6 +24,7 @@
         "buildType": "app-bundle"
       },
       "env": {
+        "EAS_BUILD_SKIP_LOCKFILE_CHECK": "1",
         "EXPO_PUBLIC_FIREBASE_API_KEY": "AIzaSyDQ_Bb0BWjuhs4VegadT_QWxeWaenw2NKg",
         "EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN": "my-first-project-fd8f6.firebaseapp.com",
         "EXPO_PUBLIC_FIREBASE_PROJECT_ID": "my-first-project-fd8f6",
