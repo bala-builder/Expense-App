@@ -35,9 +35,11 @@ export default function LoginScreen() {
   const [error, setError] = useState("");
 
   const googleClientId = process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID;
+  const googleAndroidClientId = process.env.EXPO_PUBLIC_GOOGLE_ANDROID_CLIENT_ID;
 
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId: googleClientId || undefined,
+    androidClientId: googleAndroidClientId || undefined,
     redirectUri: makeRedirectUri({ scheme: "trackcents" }),
   });
 
