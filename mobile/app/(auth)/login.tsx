@@ -15,7 +15,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Haptics from "expo-haptics";
 import * as WebBrowser from "expo-web-browser";
 import * as Google from "expo-auth-session/providers/google";
-import { makeRedirectUri } from "expo-auth-session";
 import { Ionicons } from "@expo/vector-icons";
 import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
@@ -40,7 +39,6 @@ export default function LoginScreen() {
   const [request, response, promptAsync] = Google.useAuthRequest({
     clientId: googleClientId || undefined,
     androidClientId: googleAndroidClientId || undefined,
-    redirectUri: makeRedirectUri({ scheme: "trackcents" }),
   });
 
   React.useEffect(() => {
