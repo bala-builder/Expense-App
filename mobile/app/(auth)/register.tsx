@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from "react-native";
 import { Link, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -70,9 +71,11 @@ export default function RegisterScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={s.logoRow}>
-          <View style={s.logoCircle}>
-            <Ionicons name="wallet" size={32} color="#fff" />
-          </View>
+          <Image
+            source={require("@/assets/images/icon.png")}
+            style={s.logoCircle}
+            resizeMode="contain"
+          />
         </View>
         <Text style={s.title}>Create account</Text>
         <Text style={s.subtitle}>Start tracking expenses with friends</Text>
@@ -163,12 +166,9 @@ function makeStyles(colors: ReturnType<typeof import("@/hooks/useColors").useCol
       width: 72,
       height: 72,
       borderRadius: 20,
-      backgroundColor: colors.primary,
-      alignItems: "center",
-      justifyContent: "center",
     },
-    title: { fontSize: 28, fontWeight: "700", color: colors.foreground, textAlign: "center", fontFamily: "Inter_700Bold" },
-    subtitle: { fontSize: 15, color: colors.muted, textAlign: "center", marginTop: 6, marginBottom: 32, fontFamily: "Inter_400Regular" },
+    title: { fontSize: 28, fontWeight: "700", color: colors.foreground, textAlign: "center", fontFamily: "Lexend_700Bold" },
+    subtitle: { fontSize: 15, color: colors.muted, textAlign: "center", marginTop: 6, marginBottom: 32, fontFamily: "Lexend_400Regular" },
     form: { gap: 12 },
     inputWrapper: {
       flexDirection: "row",
@@ -180,7 +180,7 @@ function makeStyles(colors: ReturnType<typeof import("@/hooks/useColors").useCol
       paddingHorizontal: 14,
     },
     inputIcon: { marginRight: 10 },
-    input: { flex: 1, paddingVertical: 14, fontSize: 15, color: colors.foreground, fontFamily: "Inter_400Regular" },
+    input: { flex: 1, paddingVertical: 14, fontSize: 15, color: colors.foreground, fontFamily: "Lexend_400Regular" },
     eyeBtn: { padding: 4, position: "absolute", right: 12 },
     errorBox: {
       flexDirection: "row",
@@ -200,7 +200,7 @@ function makeStyles(colors: ReturnType<typeof import("@/hooks/useColors").useCol
       marginTop: 4,
     },
     disabledBtn: { opacity: 0.5 },
-    primaryBtnText: { color: "#fff", fontWeight: "700", fontSize: 16, fontFamily: "Inter_700Bold" },
+    primaryBtnText: { color: "#fff", fontWeight: "700", fontSize: 16, fontFamily: "Lexend_700Bold" },
     loginRow: { flexDirection: "row", justifyContent: "center", marginTop: 32 },
     loginText: { fontSize: 14, color: colors.muted },
     loginLink: { fontSize: 14, color: colors.primary, fontWeight: "600" },

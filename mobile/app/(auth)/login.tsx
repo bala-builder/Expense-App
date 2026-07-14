@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from "react-native";
 import { Link, router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -106,9 +107,11 @@ export default function LoginScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={s.logoRow}>
-          <View style={s.logoCircle}>
-            <Ionicons name="wallet" size={32} color="#fff" />
-          </View>
+          <Image
+            source={require("@/assets/images/icon.png")}
+            style={s.logoCircle}
+            resizeMode="contain"
+          />
         </View>
         <Text style={s.title}>Welcome back</Text>
         <Text style={s.subtitle}>Sign in to Trackcents</Text>
@@ -211,16 +214,13 @@ function makeStyles(colors: ReturnType<typeof import("@/hooks/useColors").useCol
       width: 72,
       height: 72,
       borderRadius: 20,
-      backgroundColor: colors.primary,
-      alignItems: "center",
-      justifyContent: "center",
     },
     title: {
       fontSize: 28,
       fontWeight: "700",
       color: colors.foreground,
       textAlign: "center",
-      fontFamily: "Inter_700Bold",
+      fontFamily: "Lexend_700Bold",
     },
     subtitle: {
       fontSize: 15,
@@ -228,7 +228,7 @@ function makeStyles(colors: ReturnType<typeof import("@/hooks/useColors").useCol
       textAlign: "center",
       marginTop: 6,
       marginBottom: 32,
-      fontFamily: "Inter_400Regular",
+      fontFamily: "Lexend_400Regular",
     },
     form: { gap: 12 },
     inputWrapper: {
@@ -246,7 +246,7 @@ function makeStyles(colors: ReturnType<typeof import("@/hooks/useColors").useCol
       paddingVertical: 14,
       fontSize: 15,
       color: colors.foreground,
-      fontFamily: "Inter_400Regular",
+      fontFamily: "Lexend_400Regular",
     },
     eyeBtn: { padding: 4, position: "absolute", right: 12 },
     errorBox: {
@@ -257,9 +257,9 @@ function makeStyles(colors: ReturnType<typeof import("@/hooks/useColors").useCol
       borderRadius: 8,
       padding: 10,
     },
-    errorText: { fontSize: 13, color: colors.danger, flex: 1, fontFamily: "Inter_400Regular" },
+    errorText: { fontSize: 13, color: colors.danger, flex: 1, fontFamily: "Lexend_400Regular" },
     forgotBtn: { alignSelf: "flex-end" },
-    forgotText: { fontSize: 13, color: colors.primary, fontFamily: "Inter_500Medium" },
+    forgotText: { fontSize: 13, color: colors.primary, fontFamily: "Lexend_500Medium" },
     primaryBtn: {
       backgroundColor: colors.primary,
       borderRadius: colors.radius,
@@ -268,10 +268,10 @@ function makeStyles(colors: ReturnType<typeof import("@/hooks/useColors").useCol
       marginTop: 4,
     },
     disabledBtn: { opacity: 0.5 },
-    primaryBtnText: { color: "#fff", fontWeight: "700", fontSize: 16, fontFamily: "Inter_700Bold" },
+    primaryBtnText: { color: "#fff", fontWeight: "700", fontSize: 16, fontFamily: "Lexend_700Bold" },
     dividerRow: { flexDirection: "row", alignItems: "center", gap: 12, marginVertical: 4 },
     divider: { flex: 1, height: 1, backgroundColor: colors.border },
-    dividerText: { fontSize: 13, color: colors.mutedForeground, fontFamily: "Inter_400Regular" },
+    dividerText: { fontSize: 13, color: colors.mutedForeground, fontFamily: "Lexend_400Regular" },
     googleBtn: {
       flexDirection: "row",
       alignItems: "center",
@@ -283,9 +283,9 @@ function makeStyles(colors: ReturnType<typeof import("@/hooks/useColors").useCol
       borderRadius: colors.radius,
       paddingVertical: 14,
     },
-    googleBtnText: { fontSize: 15, fontWeight: "600", color: colors.foreground, fontFamily: "Inter_600SemiBold" },
+    googleBtnText: { fontSize: 15, fontWeight: "600", color: colors.foreground, fontFamily: "Lexend_600SemiBold" },
     registerRow: { flexDirection: "row", justifyContent: "center", marginTop: 32 },
-    registerText: { fontSize: 14, color: colors.muted, fontFamily: "Inter_400Regular" },
-    registerLink: { fontSize: 14, color: colors.primary, fontWeight: "600", fontFamily: "Inter_600SemiBold" },
+    registerText: { fontSize: 14, color: colors.muted, fontFamily: "Lexend_400Regular" },
+    registerLink: { fontSize: 14, color: colors.primary, fontWeight: "600", fontFamily: "Lexend_600SemiBold" },
   });
 }
