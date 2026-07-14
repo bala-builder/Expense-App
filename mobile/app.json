@@ -42,7 +42,10 @@
         {
           "android": {
             "enableProguardInReleaseBuilds": true,
-            "enableShrinkResourcesInReleaseBuilds": true
+            "enableShrinkResourcesInReleaseBuilds": true,
+            "packagingOptions": {
+              "exclude": ["**/x86/**", "**/x86_64/**"]
+            }
           }
         }
       ]
