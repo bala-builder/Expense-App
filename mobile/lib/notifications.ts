@@ -1,5 +1,5 @@
 import * as Notifications from "expo-notifications";
-import { doc, updateDoc, setDoc } from "firebase/firestore";
+import { doc, setDoc, arrayUnion } from "firebase/firestore";
 import { db } from "./firebase";
 import { Platform } from "react-native";
 
@@ -27,18 +27,14 @@ export async function registerForPushNotifications(
   if (finalStatus !== "granted") return null;
 
   try {
-    const tokenData = await Notifications.getExpoPushTokenAsync();
+    const tokenData = await Notifications.getDevicePushTokenAsync();
     const token = tokenData.data;
 
-    try {
-      await updateDoc(doc(db, "users", uid), { expoPushToken: token });
-    } catch {
-      await setDoc(
-        doc(db, "users", uid),
-        { expoPushToken: token },
-        { merge: true }
-      );
-    }
+    await setDoc(
+      doc(db, "users", uid),
+      { fcmTokens: arrayUnion(token) },
+      { merge: true }
+    );
 
     return token;
   } catch (error) {
