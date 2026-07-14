@@ -6,12 +6,12 @@
   "build": {
     "preview": {
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease -PreactNativeArchitectures=arm64-v8a,armeabi-v7a"
       },
       "environment": "preview",
       "env": {
-        "EAS_BUILD_SKIP_LOCKFILE_CHECK": "1",
-        "ORG_GRADLE_PROJECT_reactNativeArchitectures": "arm64-v8a,armeabi-v7a"
+        "EAS_BUILD_SKIP_LOCKFILE_CHECK": "1"
       }
     },
     "emulator": {
