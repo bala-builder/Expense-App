@@ -1,5 +1,20 @@
 # Changelog
 
+## 2026-07-13 — Branding, theme, and push notification fixes
+
+### Added
+- App icon, adaptive icon, and splash screen now use the actual Trackcents logo (`public/logo.png` from the web app), generated at proper sizes with the adaptive icon's background matched to the logo's own off-white so there's no visible box edge.
+- Login and register screens now render the real logo image instead of a generic Ionicons "wallet" icon in a colored circle, mirroring how `src/components/Layout.jsx` renders it on the web app.
+- Mobile typography switched from Inter to Lexend (`@expo-google-fonts/lexend`) across all 12 screens, matching the web app's font (`index.html` loads Lexend). The color tokens in `constants/colors.ts` already matched the web app's Tailwind theme almost exactly — font was the actual visible mismatch.
+
+### Fixed
+- **Android push notifications weren't reaching recipients at all.** `mobile/lib/notifications.ts` was calling `Notifications.getExpoPushTokenAsync()` (an Expo-relay-format token, `ExponentPushToken[...]`) and saving it to a Firestore field named `expoPushToken`. The Cloud Function (`functions/index.js`, `onExpenseCreated`) has only ever read `fcmToken`/`fcmTokens` and sends via `admin.messaging().sendEachForMulticast()`, which requires real FCM registration tokens — not Expo-relay tokens. Two independent mismatches (wrong field name, wrong token type) meant no notification could ever have been delivered. Switched to `Notifications.getDevicePushTokenAsync()` (returns the real platform FCM token on Android) written to `fcmTokens` via `arrayUnion`, matching the web client's existing convention (`src/lib/notifications.js`) exactly. No Cloud Function changes were needed.
+
+### Decided against (for now)
+- **16KB memory page size compatibility**: requires upgrading Expo SDK 52 → 53 (React Native 0.76 → 0.77+), a major version bump touching native modules across the app (Reanimated, Hermes, auth session, notifications) with real regression risk. Skipped because (a) this app is sideloaded, not published to Google Play, so Google's Nov 2025 policy requirement doesn't actually apply, and (b) 16KB-page-size kernels are still rare outside very new Pixel hardware, so real-device risk today is low. Revisit if either becomes untrue.
+
+---
+
 ## 2026-07-13 — Google Sign-In on Android (EAS build)
 
 ### Added
