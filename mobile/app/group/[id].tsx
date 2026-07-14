@@ -245,7 +245,7 @@ function makeStyles(colors: ReturnType<typeof import("@/hooks/useColors").useCol
       fontSize: 18,
       fontWeight: "700",
       color: colors.foreground,
-      fontFamily: "Inter_700Bold",
+      fontFamily: "Lexend_700Bold",
     },
     inviteBtn: {
       width: 36,
@@ -266,7 +266,7 @@ function makeStyles(colors: ReturnType<typeof import("@/hooks/useColors").useCol
       justifyContent: "space-between",
       alignItems: "center",
     },
-    balanceText: { fontSize: 15, fontWeight: "700", fontFamily: "Inter_700Bold" },
+    balanceText: { fontSize: 15, fontWeight: "700", fontFamily: "Lexend_700Bold" },
     expenseCount: { fontSize: 13, color: colors.muted },
     sectionTitle: {
       fontSize: 12,
@@ -320,7 +320,7 @@ function makeStyles(colors: ReturnType<typeof import("@/hooks/useColors").useCol
     expDesc: { fontSize: 14, fontWeight: "600", color: colors.foreground },
     expMeta: { fontSize: 12, color: colors.muted, marginTop: 3 },
     expRight: { alignItems: "flex-end" },
-    expAmount: { fontSize: 14, fontWeight: "700", color: colors.foreground, fontFamily: "Inter_700Bold" },
+    expAmount: { fontSize: 14, fontWeight: "700", color: colors.foreground, fontFamily: "Lexend_700Bold" },
     commentBadge: { flexDirection: "row", alignItems: "center", gap: 3, marginTop: 4 },
     commentCount: { fontSize: 11, color: colors.muted },
     empty: { alignItems: "center", paddingVertical: 40, gap: 8 },

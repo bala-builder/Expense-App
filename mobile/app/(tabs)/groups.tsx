@@ -153,7 +153,7 @@ function makeStyles(colors: ReturnType<typeof import("@/hooks/useColors").useCol
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
-    title: { fontSize: 22, fontWeight: "700", color: colors.foreground, fontFamily: "Inter_700Bold" },
+    title: { fontSize: 22, fontWeight: "700", color: colors.foreground, fontFamily: "Lexend_700Bold" },
     addBtn: {
       backgroundColor: colors.primary,
       width: 36,

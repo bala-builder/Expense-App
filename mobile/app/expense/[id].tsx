@@ -252,14 +252,14 @@ function makeStyles(colors: ReturnType<typeof import("@/hooks/useColors").useCol
       fontWeight: "700",
       color: "#fff",
       textAlign: "center",
-      fontFamily: "Inter_700Bold",
+      fontFamily: "Lexend_700Bold",
     },
     expenseAmount: {
       fontSize: 32,
       fontWeight: "800",
       color: "#fff",
       marginTop: 6,
-      fontFamily: "Inter_700Bold",
+      fontFamily: "Lexend_700Bold",
     },
     expenseDate: { fontSize: 13, color: "rgba(255,255,255,0.7)", marginTop: 4 },
     detailsCard: {

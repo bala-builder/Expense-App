@@ -131,7 +131,7 @@ function makeStyles(colors: ReturnType<typeof import("@/hooks/useColors").useCol
       alignSelf: "center",
       marginBottom: 24,
     },
-    title: { fontSize: 26, fontWeight: "700", color: colors.foreground, textAlign: "center", fontFamily: "Inter_700Bold" },
+    title: { fontSize: 26, fontWeight: "700", color: colors.foreground, textAlign: "center", fontFamily: "Lexend_700Bold" },
     subtitle: { fontSize: 15, color: colors.muted, textAlign: "center", marginTop: 8, marginBottom: 28, lineHeight: 22 },
     inputWrapper: {
       flexDirection: "row",

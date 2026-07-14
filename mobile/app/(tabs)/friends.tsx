@@ -120,7 +120,7 @@ function makeStyles(colors: ReturnType<typeof import("@/hooks/useColors").useCol
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
-    title: { fontSize: 22, fontWeight: "700", color: colors.foreground, fontFamily: "Inter_700Bold" },
+    title: { fontSize: 22, fontWeight: "700", color: colors.foreground, fontFamily: "Lexend_700Bold" },
     summaryRow: { flexDirection: "row", gap: 12, padding: 16, paddingBottom: 0 },
     summaryCard: {
       flex: 1,
@@ -131,7 +131,7 @@ function makeStyles(colors: ReturnType<typeof import("@/hooks/useColors").useCol
       alignItems: "center",
     },
     summaryLabel: { fontSize: 12, color: colors.muted, fontWeight: "500" },
-    summaryValue: { fontSize: 22, fontWeight: "700", marginTop: 4, fontFamily: "Inter_700Bold" },
+    summaryValue: { fontSize: 22, fontWeight: "700", marginTop: 4, fontFamily: "Lexend_700Bold" },
     friendCard: {
       flexDirection: "row",
       alignItems: "center",
@@ -156,7 +156,7 @@ function makeStyles(colors: ReturnType<typeof import("@/hooks/useColors").useCol
     friendEmail: { fontSize: 12, color: colors.muted, marginTop: 2 },
     balanceWrap: { alignItems: "flex-end" },
     balanceLabel: { fontSize: 11, color: colors.muted, textAlign: "right" },
-    balanceAmount: { fontSize: 15, fontWeight: "700", fontFamily: "Inter_700Bold" },
+    balanceAmount: { fontSize: 15, fontWeight: "700", fontFamily: "Lexend_700Bold" },
     settledBadge: { flexDirection: "row", alignItems: "center", gap: 4 },
     settledText: { fontSize: 13, color: colors.success, fontWeight: "500" },
     empty: { alignItems: "center", paddingVertical: 80, gap: 8 },

@@ -119,7 +119,7 @@ function makeStyles(colors: ReturnType<typeof import("@/hooks/useColors").useCol
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
-    title: { fontSize: 22, fontWeight: "700", color: colors.foreground, fontFamily: "Inter_700Bold" },
+    title: { fontSize: 22, fontWeight: "700", color: colors.foreground, fontFamily: "Lexend_700Bold" },
     subtitle: { fontSize: 13, color: colors.muted, marginTop: 2 },
     expenseCard: {
       flexDirection: "row",
@@ -151,7 +151,7 @@ function makeStyles(colors: ReturnType<typeof import("@/hooks/useColors").useCol
     groupBadgeText: { fontSize: 11, color: colors.primary, fontWeight: "500" },
     paidByText: { fontSize: 11, color: colors.muted },
     expenseRight: { alignItems: "flex-end" },
-    expenseAmount: { fontSize: 14, fontWeight: "700", color: colors.foreground, fontFamily: "Inter_700Bold" },
+    expenseAmount: { fontSize: 14, fontWeight: "700", color: colors.foreground, fontFamily: "Lexend_700Bold" },
     expenseDate: { fontSize: 11, color: colors.muted, marginTop: 3 },
     empty: { alignItems: "center", paddingVertical: 80, gap: 8 },
     emptyTitle: { fontSize: 17, fontWeight: "600", color: colors.foreground },

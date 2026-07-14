@@ -175,7 +175,7 @@ function makeStyles(colors: ReturnType<typeof import("@/hooks/useColors").useCol
       borderBottomWidth: 1,
       borderBottomColor: colors.border,
     },
-    title: { fontSize: 22, fontWeight: "700", color: colors.foreground, fontFamily: "Inter_700Bold" },
+    title: { fontSize: 22, fontWeight: "700", color: colors.foreground, fontFamily: "Lexend_700Bold" },
     avatarSection: { alignItems: "center", paddingVertical: 28, backgroundColor: colors.surface },
     avatarCircle: {
       width: 80,
@@ -215,7 +215,7 @@ function makeStyles(colors: ReturnType<typeof import("@/hooks/useColors").useCol
       borderColor: colors.border,
     },
     statCardMiddle: {},
-    statValue: { fontSize: 24, fontWeight: "700", color: colors.foreground, fontFamily: "Inter_700Bold" },
+    statValue: { fontSize: 24, fontWeight: "700", color: colors.foreground, fontFamily: "Lexend_700Bold" },
     statLabel: { fontSize: 12, color: colors.muted, marginTop: 2 },
     section: {
       marginHorizontal: 16,
