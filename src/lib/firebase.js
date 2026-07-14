@@ -19,6 +19,15 @@ export const auth = app.auth();
 export const db = app.firestore();
 export const googleProvider = new firebase.auth.GoogleAuthProvider();
 
+// Cache data locally so repeat loads render instantly from cache while the
+// live listener confirms/updates in the background, instead of showing a
+// blank/zero state until the network round-trip completes.
+db.enablePersistence({ synchronizeTabs: true }).catch((err) => {
+    if (err.code === 'failed-precondition' || err.code === 'unimplemented') {
+        console.log('Firestore persistence unavailable:', err.code);
+    }
+});
+
 let messagingInstance = null;
 try {
     if (typeof window !== 'undefined' && firebase.messaging.isSupported()) {

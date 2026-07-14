@@ -10,7 +10,7 @@ import SelectGroupModal from '../components/SelectGroupModal'
 import { cn } from '../lib/utils'
 
 export default function Dashboard() {
-    const { user, groups, getUserBalance, getGroupMembers, getGroupUserBalance, getGroupExpenses } = useApp()
+    const { user, groups, dataLoading, getUserBalance, getGroupMembers, getGroupUserBalance, getGroupExpenses } = useApp()
     const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false)
     const [isSelectGroupOpen, setIsSelectGroupOpen] = useState(false)
     const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false)
@@ -109,12 +109,21 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
                 <div className="bg-surface p-6 rounded-2xl shadow-sm border border-slate-100 transition-all duration-200 hover:shadow-md hover:border-slate-200">
                     <p className="text-sm font-medium text-secondary">Total Balance</p>
-                    <p className={cn("text-3xl font-bold mt-2", balance >= 0 ? "text-primary" : "text-red-600")}>
-                        {balance >= 0 ? '+' : '-'}${Math.abs(balance).toFixed(2)}
-                    </p>
-                    <p className="text-xs text-slate-400 mt-1">
-                        {balance >= 0 ? "You are owed in total" : "You owe in total"}
-                    </p>
+                    {dataLoading ? (
+                        <>
+                            <div className="h-9 w-32 mt-2 rounded-lg bg-slate-100 animate-pulse" />
+                            <div className="h-3 w-28 mt-2 rounded bg-slate-100 animate-pulse" />
+                        </>
+                    ) : (
+                        <>
+                            <p className={cn("text-3xl font-bold mt-2", balance >= 0 ? "text-primary" : "text-red-600")}>
+                                {balance >= 0 ? '+' : '-'}${Math.abs(balance).toFixed(2)}
+                            </p>
+                            <p className="text-xs text-slate-400 mt-1">
+                                {balance >= 0 ? "You are owed in total" : "You owe in total"}
+                            </p>
+                        </>
+                    )}
                 </div>
             </div>
 
@@ -133,7 +142,17 @@ export default function Dashboard() {
                     </div>
                 </div>
 
-                {totalGroups === 0 ? (
+                {dataLoading ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {[0, 1, 2].map(i => (
+                            <div key={i} className="bg-surface p-6 rounded-2xl border border-slate-100">
+                                <div className="w-10 h-10 rounded-lg bg-slate-100 animate-pulse mb-4" />
+                                <div className="h-4 w-2/3 rounded bg-slate-100 animate-pulse mb-2" />
+                                <div className="h-3 w-1/3 rounded bg-slate-100 animate-pulse" />
+                            </div>
+                        ))}
+                    </div>
+                ) : totalGroups === 0 ? (
                     <div className="text-center py-12 bg-slate-50 rounded-xl border border-dashed border-slate-200">
                         <p className="text-secondary">{searchQuery ? "No groups found matching your search." : "No groups yet. Create one to get started!"}</p>
                     </div>

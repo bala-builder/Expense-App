@@ -85,6 +85,7 @@ interface AppContextType {
   expenses: Expense[];
   users: AppUser[];
   loading: boolean;
+  dataLoading: boolean;
   login: (email: string, password: string) => Promise<any>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
@@ -130,6 +131,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [usersMap, setUsersMap] = useState<Record<string, AppUser>>({});
   const [loading, setLoading] = useState(true);
+  const [groupsLoaded, setGroupsLoaded] = useState(false);
+  const [expensesLoaded, setExpensesLoaded] = useState(false);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (currentUser) => {
@@ -139,6 +142,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setGroups([]);
         setExpenses([]);
         setUsersMap({});
+        setGroupsLoaded(true);
+        setExpensesLoaded(true);
       }
       setLoading(false);
     });
@@ -160,8 +165,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           ...d.data(),
         })) as Group[];
         setGroups(groupList);
+        setGroupsLoaded(true);
       },
-      (error) => console.error("Groups error:", error)
+      (error) => {
+        console.error("Groups error:", error);
+        setGroupsLoaded(true);
+      }
     );
     return unsubGroups;
   }, [user]);
@@ -174,11 +183,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user || !groupIdsString) {
       setExpenses([]);
+      setExpensesLoaded(true);
       return;
     }
     const groupIds = groupIdsString.split(",");
     const chunks = chunkArray(groupIds, 10);
     const expensesMap = new Map<string, Expense>();
+    let pending = chunks.length;
 
     const unsubs = chunks.map((chunk) =>
       onSnapshot(
@@ -195,6 +206,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             }
           });
           setExpenses(Array.from(expensesMap.values()));
+          if (pending > 0) {
+            pending -= 1;
+            if (pending === 0) setExpensesLoaded(true);
+          }
+        },
+        (error) => {
+          console.error("Expenses error:", error);
+          if (pending > 0) {
+            pending -= 1;
+            if (pending === 0) setExpensesLoaded(true);
+          }
         }
       )
     );
@@ -517,6 +539,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         groups,
         expenses,
         loading,
+        dataLoading: !groupsLoaded || !expensesLoaded,
         login,
         register,
         logout,

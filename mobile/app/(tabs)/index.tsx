@@ -16,10 +16,17 @@ import { useColors } from "@/hooks/useColors";
 import CreateGroupModal from "@/components/CreateGroupModal";
 import AddExpenseModal from "@/components/AddExpenseModal";
 
+const skeletonLine = (width: number, height: number, color: string) => ({
+  width,
+  height,
+  borderRadius: height / 2,
+  backgroundColor: color,
+});
+
 export default function DashboardScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, groups, getUserBalance, getGroupUserBalance, getGroupExpenses } = useApp();
+  const { user, groups, dataLoading, getUserBalance, getGroupUserBalance, getGroupExpenses } = useApp();
 
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [showAddExpense, setShowAddExpense] = useState(false);
@@ -64,6 +71,35 @@ export default function DashboardScreen() {
 
   const balInfo = formatBalance(totalBalance);
   const s = makeStyles(colors);
+
+  if (dataLoading) {
+    return (
+      <View style={{ flex: 1, backgroundColor: colors.background }}>
+        <View style={[s.header, { paddingTop: insets.top + 8 }]}>
+          <View>
+            <Text style={s.greeting}>Hi, {user?.displayName?.split(" ")[0] || "there"} 👋</Text>
+            <Text style={s.headerSub}>Your expense overview</Text>
+          </View>
+        </View>
+        <View style={{ paddingHorizontal: 16 }}>
+          <View style={s.balanceCard}>
+            <View style={skeletonLine(90, 12, "rgba(255,255,255,0.3)")} />
+            <View style={[skeletonLine(140, 30, "rgba(255,255,255,0.3)"), { marginTop: 8 }]} />
+            <View style={[skeletonLine(110, 12, "rgba(255,255,255,0.3)"), { marginTop: 8 }]} />
+          </View>
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={[s.groupCard, { marginTop: 10 }]}>
+              <View style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: colors.border, marginRight: 14 }} />
+              <View style={s.groupInfo}>
+                <View style={skeletonLine(120, 14, colors.border)} />
+                <View style={[skeletonLine(70, 11, colors.border), { marginTop: 6 }]} />
+              </View>
+            </View>
+          ))}
+        </View>
+      </View>
+    );
+  }
 
   const renderGroup = ({ item }: { item: (typeof groupsWithMeta)[0] }) => {
     const { label, amount, color } = formatBalance(item.balance);

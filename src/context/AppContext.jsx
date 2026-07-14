@@ -11,6 +11,8 @@ export function AppProvider({ children }) {
     const [expenses, setExpenses] = useState([])
     const [usersMap, setUsersMap] = useState({})
     const [loading, setLoading] = useState(true)
+    const [groupsLoaded, setGroupsLoaded] = useState(false)
+    const [expensesLoaded, setExpensesLoaded] = useState(false)
 
     // Auth Listener
     useEffect(() => {
@@ -46,6 +48,7 @@ export function AppProvider({ children }) {
     useEffect(() => {
         if (!user) {
             setGroups([])
+            setGroupsLoaded(true)
             return
         }
 
@@ -57,8 +60,10 @@ export function AppProvider({ children }) {
                     ...doc.data()
                 }))
                 setGroups(groupList)
+                setGroupsLoaded(true)
             }, error => {
                 console.error("Error fetching groups:", error)
+                setGroupsLoaded(true)
             })
 
         return () => unsubGroups()
@@ -72,12 +77,14 @@ export function AppProvider({ children }) {
     useEffect(() => {
         if (!user || !groupIdsString) {
             setExpenses([])
+            setExpensesLoaded(true)
             return
         }
 
         const groupIds = groupIdsString.split(',');
         const chunks = chunkArray(groupIds, 10);
         const expensesMap = new Map();
+        let pending = chunks.length
 
         const unsubs = chunks.map(chunk => {
             return db.collection('expenses')
@@ -91,6 +98,16 @@ export function AppProvider({ children }) {
                         }
                     });
                     setExpenses(Array.from(expensesMap.values()));
+                    if (pending > 0) {
+                        pending -= 1
+                        if (pending === 0) setExpensesLoaded(true)
+                    }
+                }, error => {
+                    console.error("Error fetching expenses:", error)
+                    if (pending > 0) {
+                        pending -= 1
+                        if (pending === 0) setExpensesLoaded(true)
+                    }
                 })
         });
 
@@ -544,6 +561,7 @@ export function AppProvider({ children }) {
             groups,
             expenses,
             loading,
+            dataLoading: !groupsLoaded || !expensesLoaded,
             login,
             register,
             logout,
