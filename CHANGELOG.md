@@ -1,0 +1,20 @@
+# Changelog
+
+## 2026-07-14 — Loading-flash fix, and a production incident
+
+### Fixed
+- **"$0"/"settled up" flash before real balance data loads.** `groups` and `expenses` load via separate, sequential Firestore listeners — the expenses query depends on group IDs from the groups listener, so it can't even start until groups' first snapshot arrives (a waterfall, not parallel fetches). The app's `loading` state only reflected auth readiness (resolves almost instantly), so the dashboard rendered immediately with empty data and showed a confident but false "$0" for 2-3s. Added `groupsLoaded`/`expensesLoaded` tracking exposed as a `dataLoading` flag, and used it in `Dashboard.jsx` to show a skeleton placeholder instead of false data until it's actually arrived. Mirrored identically on the mobile app (see `mobile/CHANGELOG.md`) — same bug, same cause, on both platforms.
+- Enabled Firestore's offline persistence on web (`db.enablePersistence`) so repeat visits render instantly from local cache while the live listener confirms/updates in the background.
+- Regenerated `package-lock.json` — the committed one had ~54 package URLs resolving to `package-firewall.replit.local`, a Replit-internal proxy from whenever this was last set up there, breaking `npm install` for any fresh clone (including this one).
+
+### Incident: broken production deploy, and the fix
+While testing the above, deployed a build to Firebase Hosting that rendered a **blank page with no console errors** on `expense.balaconnect.com`. Root cause: this was a fresh clone with no `.env` file (gitignored, never recreated here), so every `VITE_FIREBASE_*` value was `undefined` at build time. Vite doesn't fail the build for that — it just inlines `undefined` — so `firebase.initializeApp()` ran with garbage config, `auth.onAuthStateChanged` never resolved, and `{!loading && children}` meant nothing ever rendered. No thrown exception, hence no console output, hence blank screen with zero diagnostic signal.
+
+Fixed by pulling the authoritative config directly (`firebase apps:sdkconfig WEB`), writing the real `.env`, rebuilding, verifying locally against a real HTTP server (not just a successful build — a build succeeding says nothing about whether runtime config is valid), and redeploying. Added `.env.example` so this can't silently recur on the next fresh clone.
+
+Also discovered mid-incident: `index.html` was served with `Cache-Control: max-age=3600` (Firebase Hosting's default), meaning anyone who loaded the broken version had it **cached in their own browser for up to an hour**, even after the fix was redeployed — a plain refresh wasn't enough; only a hard reload (cache bypass) picked up the fix. Added explicit `headers` in `firebase.json`: `no-cache` for `index.html` (always revalidate with the server) and long-term immutable caching for `/assets/**` (safe, since Vite's filenames are content-hashed). This is now correct going forward — future deploys propagate without needing anyone to hard-refresh.
+
+### Lessons learned
+1. **A successful build is not a successful deploy.** `vite build` succeeding only proves the JS is syntactically valid and bundleable — it says nothing about whether `import.meta.env.VITE_*` values were actually populated. Before deploying, verify the *running* app against a real server, not just a clean build log.
+2. **Missing env vars in a browser app can produce a silent, error-free blank page.** Firebase's `initializeApp` doesn't validate config eagerly; downstream calls that depend on it (auth, in particular) can just hang without throwing, which looks identical to "still loading" forever. When debugging a blank page with zero console output, check whether the config that got baked into the bundle is actually real — don't assume a lack of errors means the code is fine.
+3. **`Cache-Control: max-age=3600` on `index.html` means every deploy takes up to an hour to actually reach users**, including fixes for a currently-broken deploy. Entry HTML should be `no-cache` (revalidate every time); only content-hashed assets should get long-term caching.
