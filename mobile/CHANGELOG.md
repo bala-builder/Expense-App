@@ -1,5 +1,21 @@
 # Changelog
 
+## 2026-07-14 — APK size reduction (73MB → 41MB)
+
+The `preview` build profile's APK was a "universal" build bundling native `.so` libraries for four CPU architectures (arm64-v8a, armeabi-v7a, x86, x86_64), even though real phones only ever use one. x86/x86_64 exist purely for emulator testing.
+
+Took three attempts to actually fix, each failing silently rather than erroring:
+
+1. **`ORG_GRADLE_PROJECT_reactNativeArchitectures` env var**: had zero effect. Verified by running `expo prebuild` locally with the var set and inspecting the generated `android/gradle.properties` — this Expo SDK's template hardcodes `reactNativeArchitectures` to all four architectures unconditionally; a project's own `gradle.properties` wins over `ORG_GRADLE_PROJECT_x` env vars when both define the same property. The file's own comment names the actual override mechanism: a Gradle `-P` command-line flag.
+2. **`eas.json`'s `gradleCommand` with `-PreactNativeArchitectures=...`**: flag reached Gradle correctly (confirmed in build logs) but *still* had no effect on the final APK. Root cause: that property only restricts `ReactAndroid`/`hermes-engine`'s own compiled-from-source `.so` files, and this project has `newArchEnabled=false` — the one code path in `@react-native/gradle-plugin` that applies it to the app module's `abiFilters` is gated behind New Architecture being on. Third-party AARs (Reanimated, Firebase, etc.) ship precompiled binaries for all four architectures regardless and aren't affected by this property at all.
+3. **`expo-build-properties`'s `packagingOptions.exclude`** (glob-pattern exclusion at final APK packaging, architecture-agnostic, not gated by New Architecture): the actual fix. First attempt at this also failed silently — wrote `"excludes"` (plural) in `app.json`, but the plugin reads `config.android.packagingOptions.exclude` (singular); wrong key name meant it silently evaluated to `undefined` and wrote nothing. Verified the correct key by grepping `expo-build-properties/build/android.js` directly, then re-verified via another local `expo prebuild` that the resulting `gradle.properties` line was actually present before committing.
+
+**Result**: 73MB → 41MB (44% reduction). Not a full elimination of x86/x86_64 — ~8MB of Hermes/fbjni/libc++ core binaries for those architectures persist even with the exclude patterns in place, likely packaged through a path that doesn't respect `packagingOptions.excludes` (possibly AAR "prefab" native library handling). Diminishing returns past this point weren't worth chasing further given the risk of another failed build cycle; 41MB is a solid, verified result.
+
+**Lesson for next time**: verify config plugin properties against the actual installed package's source before trusting property names from memory or examples written for a different major version — three separate failures this session (`enableProguardInReleaseBuilds` vs the newer plugin's renamed property, the env var vs `-P` flag distinction, `exclude` vs `excludes`) were all silent no-ops from a name/mechanism mismatch, not errors, and none were visible without actually inspecting generated build output.
+
+---
+
 ## 2026-07-13 — Branding, theme, and push notification fixes
 
 ### Added
