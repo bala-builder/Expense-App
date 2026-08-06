@@ -37,6 +37,7 @@ import {
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { registerForPushNotifications } from "@/lib/notifications";
+import { getMemberShare, getGroupDebts, Settlement } from "@/lib/balance";
 
 export interface AppUser {
   uid: string;
@@ -78,11 +79,14 @@ export interface Comment {
   createdAt: string;
 }
 
+export type { Settlement };
+
 interface AppContextType {
   user: User | null;
   appUser: AppUser | null;
   groups: Group[];
   expenses: Expense[];
+  settlements: Settlement[];
   users: AppUser[];
   loading: boolean;
   dataLoading: boolean;
@@ -112,7 +116,19 @@ interface AppContextType {
   deleteExpense: (expenseId: string) => Promise<void>;
   addComment: (expenseId: string, text: string) => Promise<void>;
   getGroupExpenses: (groupId: string) => Expense[];
+  getGroupSettlements: (groupId: string) => Settlement[];
   getGroupMembers: (groupId: string) => AppUser[];
+  getGroupDebtsSummary: (groupId: string) => { fromUid: string; toUid: string; amount: number; currency: string }[];
+  addSettlement: (
+    groupId: string,
+    fromUid: string,
+    toUid: string,
+    amount: number,
+    currency: string,
+    date: string,
+    note?: string
+  ) => Promise<void>;
+  deleteSettlement: (settlementId: string) => Promise<void>;
   getUserBalance: () => number;
   getGroupUserBalance: (groupId: string) => number;
   getFriends: () => AppUser[];
@@ -129,10 +145,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [appUser, setAppUser] = useState<AppUser | null>(null);
   const [groups, setGroups] = useState<Group[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [settlements, setSettlements] = useState<Settlement[]>([]);
   const [usersMap, setUsersMap] = useState<Record<string, AppUser>>({});
   const [loading, setLoading] = useState(true);
   const [groupsLoaded, setGroupsLoaded] = useState(false);
   const [expensesLoaded, setExpensesLoaded] = useState(false);
+  const [settlementsLoaded, setSettlementsLoaded] = useState(false);
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (currentUser) => {
@@ -216,6 +234,50 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           if (pending > 0) {
             pending -= 1;
             if (pending === 0) setExpensesLoaded(true);
+          }
+        }
+      )
+    );
+
+    return () => unsubs.forEach((u) => u());
+  }, [user, groupIdsString]);
+
+  useEffect(() => {
+    if (!user || !groupIdsString) {
+      setSettlements([]);
+      setSettlementsLoaded(true);
+      return;
+    }
+    const groupIds = groupIdsString.split(",");
+    const chunks = chunkArray(groupIds, 10);
+    const settlementsMap = new Map<string, Settlement>();
+    let pending = chunks.length;
+
+    const unsubs = chunks.map((chunk) =>
+      onSnapshot(
+        query(collection(db, "settlements"), where("groupId", "in", chunk)),
+        (snapshot) => {
+          snapshot.docChanges().forEach((change) => {
+            if (change.type === "removed") {
+              settlementsMap.delete(change.doc.id);
+            } else {
+              settlementsMap.set(change.doc.id, {
+                id: change.doc.id,
+                ...change.doc.data(),
+              } as Settlement);
+            }
+          });
+          setSettlements(Array.from(settlementsMap.values()));
+          if (pending > 0) {
+            pending -= 1;
+            if (pending === 0) setSettlementsLoaded(true);
+          }
+        },
+        (error) => {
+          console.error("Settlements error:", error);
+          if (pending > 0) {
+            pending -= 1;
+            if (pending === 0) setSettlementsLoaded(true);
           }
         }
       )
@@ -354,8 +416,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const expSnap = await getDocs(
       query(collection(db, "expenses"), where("groupId", "==", groupId))
     );
+    const setSnap = await getDocs(
+      query(collection(db, "settlements"), where("groupId", "==", groupId))
+    );
     const batch = writeBatch(db);
     expSnap.docs.forEach((d) => batch.delete(d.ref));
+    setSnap.docs.forEach((d) => batch.delete(d.ref));
     batch.delete(doc(db, "groups", groupId));
     await batch.commit();
   };
@@ -456,6 +522,36 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const getGroupExpenses = (groupId: string) =>
     expenses.filter((e) => e.groupId === groupId);
 
+  const getGroupSettlements = (groupId: string) =>
+    settlements.filter((s) => s.groupId === groupId);
+
+  const addSettlement = async (
+    groupId: string,
+    fromUid: string,
+    toUid: string,
+    amount: number,
+    currency: string = "USD",
+    date: string,
+    note: string = ""
+  ) => {
+    if (!user) return;
+    await addDoc(collection(db, "settlements"), {
+      groupId,
+      fromUid,
+      toUid,
+      amount: parseFloat(String(amount)),
+      currency,
+      date: date || new Date().toISOString().split("T")[0],
+      note,
+      createdBy: user.uid,
+      createdAt: serverTimestamp(),
+    });
+  };
+
+  const deleteSettlement = async (settlementId: string) => {
+    await deleteDoc(doc(db, "settlements", settlementId));
+  };
+
   const getGroupMembers = (groupId: string): AppUser[] => {
     const group = groups.find((g) => g.id === groupId);
     if (!group) return [];
@@ -467,27 +563,39 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }));
   };
 
-  const calculateBalance = (expensesList: Expense[]) => {
+  const calculateBalance = (expensesList: Expense[], settlementsList: Settlement[] = []) => {
     if (!user) return 0;
     let totalPaid = 0;
     let totalShare = 0;
     expensesList.forEach((expense) => {
       if (expense.paidBy === user.uid) totalPaid += expense.amount;
-      if (expense.splitAmong?.includes(user.uid)) {
-        if (expense.splitType === "percentage" && expense.splitDetails) {
-          totalShare += (expense.amount * (expense.splitDetails[user.uid] || 0)) / 100;
-        } else {
-          totalShare += expense.amount / (expense.splitAmong.length || 1);
-        }
-      }
+      totalShare += getMemberShare(expense, user.uid);
     });
-    return totalPaid - totalShare;
+    let settlementAdjust = 0;
+    settlementsList.forEach((s) => {
+      if (s.fromUid === user.uid) settlementAdjust += s.amount;
+      if (s.toUid === user.uid) settlementAdjust -= s.amount;
+    });
+    return totalPaid - totalShare + settlementAdjust;
   };
 
-  const getUserBalance = () => calculateBalance(expenses);
+  const getGroupDebtsSummary = (groupId: string) => {
+    const group = groups.find((g) => g.id === groupId);
+    if (!group) return [];
+    return getGroupDebts(
+      getGroupExpenses(groupId),
+      group.members,
+      getGroupSettlements(groupId)
+    );
+  };
+
+  const getUserBalance = () => calculateBalance(expenses, settlements);
 
   const getGroupUserBalance = (groupId: string) =>
-    calculateBalance(expenses.filter((e) => e.groupId === groupId));
+    calculateBalance(
+      expenses.filter((e) => e.groupId === groupId),
+      settlements.filter((s) => s.groupId === groupId)
+    );
 
   const getFriends = (): AppUser[] => {
     if (!user) return [];
@@ -528,6 +636,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
       }
     });
+
+    settlements.forEach((s) => {
+      const isUserFrom = s.fromUid === user.uid && s.toUid === friendUid;
+      const isUserTo = s.fromUid === friendUid && s.toUid === user.uid;
+      if (isUserFrom || isUserTo) balance += s.amount;
+    });
+
     return balance;
   };
 
@@ -538,8 +653,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         appUser,
         groups,
         expenses,
+        settlements,
         loading,
-        dataLoading: !groupsLoaded || !expensesLoaded,
+        dataLoading: !groupsLoaded || !expensesLoaded || !settlementsLoaded,
         login,
         register,
         logout,
@@ -556,7 +672,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         deleteExpense,
         addComment,
         getGroupExpenses,
+        getGroupSettlements,
         getGroupMembers,
+        getGroupDebtsSummary,
+        addSettlement,
+        deleteSettlement,
         getUserBalance,
         getGroupUserBalance,
         getFriends,

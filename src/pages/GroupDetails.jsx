@@ -1,28 +1,43 @@
 import { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, Receipt, UserPlus, Settings, Search } from 'lucide-react'
+import { ArrowLeft, Plus, Receipt, UserPlus, Settings, Search, HandCoins, ArrowRight } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { useApp } from '../context/AppContext'
 import ExpenseModal from '../components/ExpenseModal'
 import InviteMemberModal from '../components/InviteMemberModal'
 import EditGroupModal from '../components/EditGroupModal'
+import SettleUpModal from '../components/SettleUpModal'
 import { cn, getCurrencySymbol, groupExpensesByMonth } from '../lib/utils'
 
 export default function GroupDetails() {
     const { groupId } = useParams()
     const navigate = useNavigate()
-    const { groups, getGroupExpenses, getGroupMembers, getGroupUserBalance, user } = useApp()
+    const { groups, getGroupExpenses, getGroupMembers, getGroupUserBalance, getGroupDebtsSummary, getGroupSettlements, user } = useApp()
     const [isAddExpenseOpen, setIsAddExpenseOpen] = useState(false)
     const [expenseToEdit, setExpenseToEdit] = useState(null)
     const [isInviteModalOpen, setIsInviteModalOpen] = useState(false)
     const [isEditGroupOpen, setIsEditGroupOpen] = useState(false)
+    const [isSettleUpOpen, setIsSettleUpOpen] = useState(false)
+    const [settleUpPrefill, setSettleUpPrefill] = useState(null)
     const [searchQuery, setSearchQuery] = useState('')
 
     const group = groups.find(g => g.id === groupId)
     const expenses = getGroupExpenses(groupId)
     const members = getGroupMembers(groupId)
     const groupBalance = getGroupUserBalance(groupId)
+    const groupDebts = getGroupDebtsSummary(groupId)
+    const groupSettlements = getGroupSettlements(groupId)
+
+    const getMemberName = (uid) => {
+        if (uid === user?.uid) return 'You'
+        return members.find(m => m.id === uid)?.name || 'Unknown'
+    }
+
+    const openSettleUp = (debt = null) => {
+        setSettleUpPrefill(debt)
+        setIsSettleUpOpen(true)
+    }
 
     const filteredExpenses = useMemo(() => {
         if (!searchQuery.trim()) return expenses
@@ -69,8 +84,87 @@ export default function GroupDetails() {
                         <Plus size={16} className="mr-2" />
                         Add Expense
                     </Button>
+                    <Button size="sm" variant="outline" onClick={() => openSettleUp()}>
+                        <HandCoins size={16} className="mr-2" />
+                        Settle Up
+                    </Button>
                 </div>
             </div>
+
+            {/* Who Owes Whom */}
+            <div className="bg-surface rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+                    <h2 className="font-semibold text-slate-900">Balances</h2>
+                    <p className="text-xs text-secondary mt-0.5">Who owes whom in this group</p>
+                </div>
+                <div className="p-4">
+                    {groupDebts.length === 0 ? (
+                        <p className="text-sm text-secondary text-center py-4">
+                            {expenses.length === 0 ? 'Add expenses to see balances.' : 'All settled up! No outstanding debts.'}
+                        </p>
+                    ) : (
+                        <div className="space-y-2">
+                            {groupDebts.map((debt, i) => (
+                                <div
+                                    key={`${debt.fromUid}-${debt.toUid}-${debt.currency}-${i}`}
+                                    className="flex items-center justify-between p-3 rounded-lg bg-slate-50 border border-slate-100"
+                                >
+                                    <div className="flex items-center gap-2 text-sm">
+                                        <span className="font-medium text-slate-900">{getMemberName(debt.fromUid)}</span>
+                                        <span className="text-slate-400">owes</span>
+                                        <span className="font-medium text-slate-900">{getMemberName(debt.toUid)}</span>
+                                        <span className="font-bold text-red-600">
+                                            {getCurrencySymbol(debt.currency)}{debt.amount.toFixed(2)}
+                                        </span>
+                                    </div>
+                                    <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                                        onClick={() => openSettleUp(debt)}
+                                    >
+                                        Settle
+                                        <ArrowRight size={14} className="ml-1" />
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Settlement History */}
+            {groupSettlements.length > 0 && (
+                <div className="bg-surface rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                    <div className="p-4 border-b border-slate-100 bg-slate-50/50">
+                        <h2 className="font-semibold text-slate-900">Settlements</h2>
+                    </div>
+                    <div className="divide-y divide-slate-100">
+                        {[...groupSettlements]
+                            .sort((a, b) => new Date(b.date) - new Date(a.date))
+                            .map(settlement => (
+                                <div key={settlement.id} className="p-4 flex items-center gap-3">
+                                    <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center shrink-0">
+                                        <HandCoins size={16} className="text-green-600" />
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm text-slate-900">
+                                            <span className="font-medium">{getMemberName(settlement.fromUid)}</span>
+                                            {' paid '}
+                                            <span className="font-medium">{getMemberName(settlement.toUid)}</span>
+                                        </p>
+                                        <p className="text-xs text-secondary">
+                                            {settlement.date}{settlement.note ? ` · ${settlement.note}` : ''}
+                                        </p>
+                                    </div>
+                                    <span className="text-sm font-bold text-green-600 shrink-0">
+                                        {getCurrencySymbol(settlement.currency)}{settlement.amount.toFixed(2)}
+                                    </span>
+                                </div>
+                            ))}
+                    </div>
+                </div>
+            )}
 
             {/* Expenses List */}
             <div className="bg-surface rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
@@ -193,6 +287,14 @@ export default function GroupDetails() {
                 onClose={() => setIsEditGroupOpen(false)}
                 group={group}
                 members={members}
+            />
+
+            <SettleUpModal
+                isOpen={isSettleUpOpen}
+                onClose={() => { setIsSettleUpOpen(false); setSettleUpPrefill(null) }}
+                groupId={groupId}
+                members={members}
+                prefill={settleUpPrefill}
             />
         </div >
     )

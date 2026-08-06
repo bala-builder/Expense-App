@@ -16,6 +16,7 @@ import { useApp } from "@/context/AppContext";
 import { useColors } from "@/hooks/useColors";
 import AddExpenseModal from "@/components/AddExpenseModal";
 import InviteMemberModal from "@/components/InviteMemberModal";
+import SettleUpModal from "@/components/SettleUpModal";
 
 export default function GroupDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,12 +28,21 @@ export default function GroupDetailScreen() {
     getGroupExpenses,
     getGroupMembers,
     getGroupUserBalance,
+    getGroupDebtsSummary,
+    getGroupSettlements,
     deleteExpense,
     removeGroupMember,
   } = useApp();
 
   const [showAddExpense, setShowAddExpense] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
+  const [showSettleUp, setShowSettleUp] = useState(false);
+  const [settleUpPrefill, setSettleUpPrefill] = useState<{
+    fromUid: string;
+    toUid: string;
+    amount: number;
+    currency?: string;
+  } | null>(null);
 
   const group = groups.find((g) => g.id === id);
   const expenses = getGroupExpenses(id || "").sort((a, b) => {
@@ -42,6 +52,16 @@ export default function GroupDetailScreen() {
   });
   const members = getGroupMembers(id || "");
   const groupBalance = getGroupUserBalance(id || "");
+  const groupDebts = getGroupDebtsSummary(id || "");
+  const groupSettlements = getGroupSettlements(id || "");
+
+  const getMemberName = (uid: string) =>
+    uid === user?.uid ? "You" : members.find((m) => m.uid === uid)?.name || "Someone";
+
+  const openSettleUp = (debt?: typeof settleUpPrefill) => {
+    setSettleUpPrefill(debt || null);
+    setShowSettleUp(true);
+  };
 
   if (!group) {
     return (
@@ -53,9 +73,6 @@ export default function GroupDetailScreen() {
       </View>
     );
   }
-
-  const getPaidByName = (uid: string) =>
-    uid === user?.uid ? "You" : members.find((m) => m.uid === uid)?.name || "Someone";
 
   const formatBalance = (bal: number) => {
     if (bal > 0.01) return { text: `You're owed $${bal.toFixed(2)}`, color: colors.success };
@@ -128,7 +145,7 @@ export default function GroupDetailScreen() {
         data={expenses}
         keyExtractor={(item) => item.id}
         renderItem={({ item }) => {
-          const paidByName = getPaidByName(item.paidBy);
+          const paidByName = getMemberName(item.paidBy);
           const isYou = item.paidBy === user?.uid;
           return (
             <TouchableOpacity
@@ -164,8 +181,73 @@ export default function GroupDetailScreen() {
           <View>
             <View style={s.balanceCard}>
               <Text style={[s.balanceText, { color: balInfo.color }]}>{balInfo.text}</Text>
-              <Text style={s.expenseCount}>{expenses.length} expense{expenses.length !== 1 ? "s" : ""}</Text>
+              <TouchableOpacity style={s.settleBtn} onPress={() => openSettleUp()}>
+                <Ionicons name="cash-outline" size={16} color={colors.primary} />
+                <Text style={s.settleBtnText}>Settle Up</Text>
+              </TouchableOpacity>
             </View>
+
+            <Text style={s.sectionTitle}>Balances</Text>
+            {groupDebts.length === 0 ? (
+              <View style={s.emptyDebts}>
+                <Text style={s.emptyDebtsText}>
+                  {expenses.length === 0
+                    ? "Add expenses to see balances."
+                    : "All settled up!"}
+                </Text>
+              </View>
+            ) : (
+              groupDebts.map((debt, i) => (
+                <TouchableOpacity
+                  key={`${debt.fromUid}-${debt.toUid}-${debt.currency}-${i}`}
+                  style={s.debtCard}
+                  onPress={() => openSettleUp(debt)}
+                  activeOpacity={0.8}
+                >
+                  <View style={s.debtInfo}>
+                    <Text style={s.debtText}>
+                      <Text style={s.debtName}>{getMemberName(debt.fromUid)}</Text>
+                      {" owes "}
+                      <Text style={s.debtName}>{getMemberName(debt.toUid)}</Text>
+                    </Text>
+                    <Text style={s.debtAmount}>
+                      {debt.currency} {debt.amount.toFixed(2)}
+                    </Text>
+                  </View>
+                  <View style={s.debtSettle}>
+                    <Text style={s.debtSettleText}>Settle</Text>
+                    <Ionicons name="chevron-forward" size={16} color={colors.primary} />
+                  </View>
+                </TouchableOpacity>
+              ))
+            )}
+
+            {groupSettlements.length > 0 && (
+              <>
+                <Text style={[s.sectionTitle, { marginTop: 16 }]}>Settlements</Text>
+                {groupSettlements
+                  .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                  .map((settlement) => (
+                    <View key={settlement.id} style={s.settlementCard}>
+                      <View style={[s.expIcon, { backgroundColor: `${colors.success}15` }]}>
+                        <Ionicons name="cash-outline" size={16} color={colors.success} />
+                      </View>
+                      <View style={s.expInfo}>
+                        <Text style={s.expDesc}>
+                          {getMemberName(settlement.fromUid)} paid {getMemberName(settlement.toUid)}
+                        </Text>
+                        <Text style={s.expMeta}>
+                          {settlement.date}
+                          {settlement.note ? ` · ${settlement.note}` : ""}
+                        </Text>
+                      </View>
+                      <Text style={[s.expAmount, { color: colors.success }]}>
+                        {settlement.currency} {settlement.amount.toFixed(2)}
+                      </Text>
+                    </View>
+                  ))}
+              </>
+            )}
 
             <Text style={s.sectionTitle}>Members</Text>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.memberScroll}>
@@ -223,6 +305,12 @@ export default function GroupDetailScreen() {
         groupId={id || ""}
         groupName={group.name}
       />
+      <SettleUpModal
+        visible={showSettleUp}
+        onClose={() => { setShowSettleUp(false); setSettleUpPrefill(null); }}
+        groupId={id || ""}
+        prefill={settleUpPrefill}
+      />
     </View>
   );
 }
@@ -266,8 +354,53 @@ function makeStyles(colors: ReturnType<typeof import("@/hooks/useColors").useCol
       justifyContent: "space-between",
       alignItems: "center",
     },
-    balanceText: { fontSize: 15, fontWeight: "700", fontFamily: "Lexend_700Bold" },
-    expenseCount: { fontSize: 13, color: colors.muted },
+    balanceText: { fontSize: 15, fontWeight: "700", fontFamily: "Lexend_700Bold", flex: 1 },
+    settleBtn: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingHorizontal: 12,
+      paddingVertical: 8,
+      borderRadius: 10,
+      backgroundColor: `${colors.primary}15`,
+    },
+    settleBtnText: { fontSize: 13, fontWeight: "600", color: colors.primary },
+    emptyDebts: {
+      backgroundColor: colors.surface,
+      borderRadius: colors.radius,
+      padding: 16,
+      marginBottom: 16,
+      borderWidth: 1,
+      borderColor: colors.border,
+      alignItems: "center",
+    },
+    emptyDebtsText: { fontSize: 13, color: colors.muted },
+    debtCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderRadius: colors.radius,
+      padding: 14,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    debtInfo: { flex: 1 },
+    debtText: { fontSize: 14, color: colors.foreground },
+    debtName: { fontWeight: "600" },
+    debtAmount: { fontSize: 13, color: colors.danger, fontWeight: "700", marginTop: 4 },
+    debtSettle: { flexDirection: "row", alignItems: "center", gap: 2 },
+    debtSettleText: { fontSize: 13, fontWeight: "600", color: colors.primary },
+    settlementCard: {
+      flexDirection: "row",
+      alignItems: "center",
+      backgroundColor: colors.surface,
+      borderRadius: colors.radius,
+      padding: 14,
+      marginBottom: 8,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
     sectionTitle: {
       fontSize: 12,
       fontWeight: "600",

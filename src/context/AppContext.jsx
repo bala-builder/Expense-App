@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useMemo } from '
 import firebase from 'firebase/compat/app'
 import { auth, db, googleProvider } from '../lib/firebase'
 import { registerForPushNotifications, onForegroundMessage } from '../lib/notifications'
+import { getMemberShare, getGroupDebts } from '../lib/balance'
 
 const AppContext = createContext()
 
@@ -9,10 +10,12 @@ export function AppProvider({ children }) {
     const [user, setUser] = useState(null)
     const [groups, setGroups] = useState([])
     const [expenses, setExpenses] = useState([])
+    const [settlements, setSettlements] = useState([])
     const [usersMap, setUsersMap] = useState({})
     const [loading, setLoading] = useState(true)
     const [groupsLoaded, setGroupsLoaded] = useState(false)
     const [expensesLoaded, setExpensesLoaded] = useState(false)
+    const [settlementsLoaded, setSettlementsLoaded] = useState(false)
 
     // Auth Listener
     useEffect(() => {
@@ -110,6 +113,47 @@ export function AppProvider({ children }) {
                     }
                 })
         });
+
+        return () => unsubs.forEach(unsub => unsub())
+    }, [user, groupIdsString])
+
+    // 2b. Settlements Listener
+    useEffect(() => {
+        if (!user || !groupIdsString) {
+            setSettlements([])
+            setSettlementsLoaded(true)
+            return
+        }
+
+        const groupIds = groupIdsString.split(',')
+        const chunks = chunkArray(groupIds, 10)
+        const settlementsMap = new Map()
+        let pending = chunks.length
+
+        const unsubs = chunks.map(chunk => {
+            return db.collection('settlements')
+                .where('groupId', 'in', chunk)
+                .onSnapshot(snapshot => {
+                    snapshot.docChanges().forEach(change => {
+                        if (change.type === 'removed') {
+                            settlementsMap.delete(change.doc.id)
+                        } else {
+                            settlementsMap.set(change.doc.id, { id: change.doc.id, ...change.doc.data() })
+                        }
+                    })
+                    setSettlements(Array.from(settlementsMap.values()))
+                    if (pending > 0) {
+                        pending -= 1
+                        if (pending === 0) setSettlementsLoaded(true)
+                    }
+                }, error => {
+                    console.error("Error fetching settlements:", error)
+                    if (pending > 0) {
+                        pending -= 1
+                        if (pending === 0) setSettlementsLoaded(true)
+                    }
+                })
+        })
 
         return () => unsubs.forEach(unsub => unsub())
     }, [user, groupIdsString])
@@ -301,15 +345,18 @@ export function AppProvider({ children }) {
 
     const deleteGroup = async (groupId) => {
         try {
-            // 1. Delete all expenses in the group
             const expensesSnapshot = await db.collection('expenses').where('groupId', '==', groupId).get()
+            const settlementsSnapshot = await db.collection('settlements').where('groupId', '==', groupId).get()
             const batch = db.batch()
 
             expensesSnapshot.docs.forEach(doc => {
                 batch.delete(doc.ref)
             })
+            settlementsSnapshot.docs.forEach(doc => {
+                batch.delete(doc.ref)
+            })
 
-            // 2. Delete the group itself
+            // Delete the group itself
             const groupRef = db.collection('groups').doc(groupId)
             batch.delete(groupRef)
 
@@ -466,6 +513,37 @@ export function AppProvider({ children }) {
 
     const getGroupExpenses = (groupId) => expenses.filter(e => e.groupId === groupId)
 
+    const getGroupSettlements = (groupId) => settlements.filter(s => s.groupId === groupId)
+
+    const addSettlement = async (groupId, fromUid, toUid, amount, currency = 'USD', date, note = '') => {
+        if (!user) return
+        try {
+            await db.collection('settlements').add({
+                groupId,
+                fromUid,
+                toUid,
+                amount: parseFloat(amount),
+                currency,
+                date: date || new Date().toISOString().split('T')[0],
+                note,
+                createdBy: user.uid,
+                createdAt: new Date()
+            })
+        } catch (error) {
+            console.error("Error adding settlement:", error)
+            throw error
+        }
+    }
+
+    const deleteSettlement = async (settlementId) => {
+        try {
+            await db.collection('settlements').doc(settlementId).delete()
+        } catch (error) {
+            console.error("Error deleting settlement:", error)
+            throw error
+        }
+    }
+
     const getGroupMembers = (groupId) => {
         const group = groups.find(g => g.id === groupId)
         if (!group) return []
@@ -477,7 +555,7 @@ export function AppProvider({ children }) {
         }))
     }
 
-    const calculateBalance = (expensesList) => {
+    const calculateBalance = (expensesList, settlementsList = []) => {
         if (!user) return 0
         let totalPaid = 0
         let totalShare = 0
@@ -486,21 +564,32 @@ export function AppProvider({ children }) {
             if (expense.paidBy === user.uid) {
                 totalPaid += expense.amount
             }
-            if (Array.isArray(expense.splitAmong) && expense.splitAmong.includes(user.uid)) {
-                if (expense.splitType === 'percentage' && expense.splitDetails) {
-                    const percentage = expense.splitDetails[user.uid] || 0
-                    totalShare += (expense.amount * percentage) / 100
-                } else {
-                    totalShare += (expense.amount / expense.splitAmong.length)
-                }
-            }
+            totalShare += getMemberShare(expense, user.uid)
         })
-        return totalPaid - totalShare
+
+        let settlementAdjust = 0
+        settlementsList.forEach(s => {
+            if (s.fromUid === user.uid) settlementAdjust += s.amount
+            if (s.toUid === user.uid) settlementAdjust -= s.amount
+        })
+
+        return totalPaid - totalShare + settlementAdjust
     }
 
-    const getUserBalance = () => calculateBalance(expenses)
+    const getGroupDebtsSummary = (groupId) => {
+        const group = groups.find(g => g.id === groupId)
+        if (!group) return []
+        const groupExpenses = getGroupExpenses(groupId)
+        const groupSettlements = getGroupSettlements(groupId)
+        return getGroupDebts(groupExpenses, group.members, groupSettlements)
+    }
 
-    const getGroupUserBalance = (groupId) => calculateBalance(expenses.filter(e => e.groupId === groupId))
+    const getUserBalance = () => calculateBalance(expenses, settlements)
+
+    const getGroupUserBalance = (groupId) => calculateBalance(
+        expenses.filter(e => e.groupId === groupId),
+        settlements.filter(s => s.groupId === groupId)
+    )
 
     const getFriends = () => {
         if (!user) return []
@@ -552,6 +641,12 @@ export function AppProvider({ children }) {
             }
         })
 
+        settlements.forEach(s => {
+            const isUserFrom = s.fromUid === user.uid && s.toUid === friendUid
+            const isUserTo = s.fromUid === friendUid && s.toUid === user.uid
+            if (isUserFrom || isUserTo) balance += s.amount
+        })
+
         return balance
     }
 
@@ -560,8 +655,9 @@ export function AppProvider({ children }) {
             user,
             groups,
             expenses,
+            settlements,
             loading,
-            dataLoading: !groupsLoaded || !expensesLoaded,
+            dataLoading: !groupsLoaded || !expensesLoaded || !settlementsLoaded,
             login,
             register,
             logout,
@@ -578,7 +674,11 @@ export function AppProvider({ children }) {
             deleteExpense,
             addComment,
             getGroupExpenses,
+            getGroupSettlements,
             getGroupMembers,
+            getGroupDebtsSummary,
+            addSettlement,
+            deleteSettlement,
             getUserBalance,
             getGroupUserBalance,
             getFriends,
