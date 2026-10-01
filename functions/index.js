@@ -1,16 +1,18 @@
-const functions = require('firebase-functions/v1');
+const { onDocumentCreated } = require('firebase-functions/v2/firestore');
 const admin = require('firebase-admin');
 
 admin.initializeApp();
 
-console.log('onExpenseCreated function loaded successfully.');
+console.log('onExpenseCreatedV2 function loaded successfully.');
 
-exports.onExpenseCreated = functions.firestore
-    .document('expenses/{expenseId}')
-    .onCreate(async (snap, context) => {
-        console.log('onExpenseCreated triggered. expenseId:', context.params.expenseId);
+exports.onExpenseCreatedV2 = onDocumentCreated(
+    { document: 'expenses/{expenseId}', region: 'us-central1' },
+    async (event) => {
+        const expenseId = event.params.expenseId;
+        console.log('onExpenseCreatedV2 triggered. expenseId:', expenseId);
 
-        const expense = snap.data();
+        if (!event.data) return null;
+        const expense = event.data.data();
         console.log('Expense data:', JSON.stringify({
             groupId: expense.groupId,
             paidBy: expense.paidBy,
@@ -88,7 +90,7 @@ exports.onExpenseCreated = functions.firestore
             },
             data: {
                 groupId: groupId || '',
-                expenseId: context.params.expenseId || ''
+                expenseId: expenseId || ''
             },
             tokens: uniqueTokens
         };
@@ -139,7 +141,8 @@ exports.onExpenseCreated = functions.firestore
         }
 
         return null;
-    });
+    }
+);
 
 exports.sendMail = require('./sendMail').sendMail;
 exports.sendInvite = require('./sendInvite').sendInvite;
