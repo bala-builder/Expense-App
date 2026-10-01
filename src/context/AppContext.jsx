@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react'
 import firebase from 'firebase/compat/app'
-import { auth, db, googleProvider } from '../lib/firebase'
+import { auth, db, functions, googleProvider } from '../lib/firebase'
 import { registerForPushNotifications, onForegroundMessage } from '../lib/notifications'
 import { getMemberShare, getGroupDebts } from '../lib/balance'
 
@@ -309,19 +309,7 @@ export function AppProvider({ children }) {
                 if (!userExists) {
                     console.log(`Sending invitation email to ${email}...`)
                     try {
-                        await db.collection('mail').add({
-                            from: 'noreply@balaconnect.com',
-                            to: email,
-                            message: {
-                                subject: `Invite to join ${name} on Trackcents`,
-                                html: `
-                                    <h2>You've been invited!</h2>
-                                    <p>${user.displayName || user.email} has invited you to join the group <strong>${name}</strong> on Trackcents.</p>
-                                    <p>Trackcents helps you track and split expenses with friends easily.</p>
-                                    <a href="https://expense.balaconnect.com/signup" style="background: #2563eb; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; display: inline-block; margin-top: 10px;">Sign Up Now</a>
-                                `
-                            }
-                        })
+                        await functions.httpsCallable('sendInvite')({ groupId: groupRes.id, email })
                         console.log(`Invitation document added for ${email}`)
                     } catch (mailErr) {
                         console.error(`Failed to add mail doc for ${email}:`, mailErr)
@@ -390,19 +378,7 @@ export function AppProvider({ children }) {
 
                 // Create invitation email trigger
                 try {
-                    await db.collection('mail').add({
-                        from: 'noreply@balaconnect.com',
-                        to: email,
-                        message: {
-                            subject: `Invite to join ${groupName} on Trackcents`,
-                            html: `
-                                <h2>You've been invited!</h2>
-                                <p>${user.displayName || user.email} has invited you to join the group <strong>${groupName}</strong> on Trackcents.</p>
-                                <p>Trackcents helps you track and split expenses with friends easily.</p>
-                                <a href="https://expense.balaconnect.com/signup" style="background: #2563eb; color: white; padding: 10px 20px; border-radius: 5px; text-decoration: none; display: inline-block; margin-top: 10px;">Sign Up Now</a>
-                            `
-                        }
-                    })
+                    await functions.httpsCallable('sendInvite')({ groupId, email })
                     console.log(`Invitation document added for ${email}`)
                 } catch (mailErr) {
                     console.error("Failed to crate mail document:", mailErr)

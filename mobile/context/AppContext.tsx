@@ -35,7 +35,8 @@ import {
   documentId,
   serverTimestamp,
 } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { httpsCallable } from "firebase/functions";
+import { auth, db, functions } from "@/lib/firebase";
 import { registerForPushNotifications } from "@/lib/notifications";
 import { getMemberShare, getGroupDebts, Settlement } from "@/lib/balance";
 
@@ -396,14 +397,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     for (const email of emailsToFind) {
       const userExists = Object.values(usersMap).some((u) => u.email === email);
       if (!userExists) {
-        await addDoc(collection(db, "mail"), {
-          from: "noreply@balaconnect.com",
-          to: email,
-          message: {
-            subject: `Invite to join ${name} on Trackcents`,
-            html: `<h2>You've been invited!</h2><p>${user.displayName || user.email} has invited you to join the group <strong>${name}</strong> on Trackcents.</p><p>Trackcents helps you track and split expenses with friends easily.</p><a href="https://expense.balaconnect.com/signup" style="background:#2563eb;color:white;padding:10px 20px;border-radius:5px;text-decoration:none;display:inline-block;margin-top:10px;">Sign Up Now</a>`,
-          },
-        }).catch(console.error);
+        await httpsCallable(functions, "sendInvite")({ groupId: groupRef.id, email }).catch(console.error);
       }
     }
   };
@@ -444,14 +438,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       await updateDoc(groupRef, {
         memberEmails: arrayUnion(email),
       });
-      await addDoc(collection(db, "mail"), {
-        from: "noreply@balaconnect.com",
-        to: email,
-        message: {
-          subject: `Invite to join ${groupName} on Trackcents`,
-          html: `<h2>You've been invited!</h2><p>${user.displayName || user.email} has invited you to join <strong>${groupName}</strong> on Trackcents.</p><a href="https://expense.balaconnect.com/signup" style="background:#2563eb;color:white;padding:10px 20px;border-radius:5px;text-decoration:none;display:inline-block;margin-top:10px;">Sign Up Now</a>`,
-        },
-      }).catch(console.error);
+      await httpsCallable(functions, "sendInvite")({ groupId, email }).catch(console.error);
     }
   };
 

@@ -5,6 +5,7 @@ import { initializeAuth, getAuth } from "firebase/auth";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const { getReactNativePersistence } = require("firebase/auth");
 import { getFirestore } from "firebase/firestore";
+import { getFunctions } from "firebase/functions";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const firebaseConfig = {
@@ -29,4 +30,5 @@ try {
 
 export { auth };
 export const db = getFirestore(app);
+export const functions = getFunctions(app);
 export default app;

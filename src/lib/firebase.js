@@ -2,6 +2,7 @@ import firebase from 'firebase/compat/app';
 import 'firebase/compat/auth';
 import 'firebase/compat/firestore';
 import 'firebase/compat/messaging';
+import 'firebase/compat/functions';
 
 const firebaseConfig = {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -17,6 +18,7 @@ const app = firebase.initializeApp(firebaseConfig);
 
 export const auth = app.auth();
 export const db = app.firestore();
+export const functions = app.functions();
 export const googleProvider = new firebase.auth.GoogleAuthProvider();
 
 // Cache data locally so repeat loads render instantly from cache while the
