@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { X, Save, Trash2, UserMinus } from 'lucide-react'
+import { X, Save, Trash2, UserMinus, UserPlus } from 'lucide-react'
 import { Button } from './ui/button'
 import { Input } from './ui/input'
 import { useApp } from '../context/AppContext'
 
-export default function EditGroupModal({ isOpen, onClose, group, members }) {
+export default function EditGroupModal({ isOpen, onClose, group, members, onInvite }) {
     const { updateGroup, removeGroupMember, deleteGroup, user } = useApp()
     const navigate = useNavigate()
     const [name, setName] = useState('')
@@ -60,7 +60,7 @@ export default function EditGroupModal({ isOpen, onClose, group, members }) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
             <div className="w-full max-w-md bg-surface rounded-xl shadow-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                 <div className="flex items-center justify-between p-4 border-b border-slate-100">
-                    <h2 className="text-lg font-semibold text-slate-900">Edit Group</h2>
+                    <h2 className="text-lg font-semibold text-slate-900">Group Settings</h2>
                     <Button variant="ghost" size="sm" onClick={onClose} className="h-8 w-8 p-0">
                         <X size={18} />
                     </Button>
@@ -84,7 +84,13 @@ export default function EditGroupModal({ isOpen, onClose, group, members }) {
                     </form>
 
                     <div className="space-y-3">
-                        <h3 className="text-sm font-medium text-slate-700">Members ({members.length})</h3>
+                        <div className="flex items-center justify-between">
+                            <h3 className="text-sm font-medium text-slate-700">Members ({members.length})</h3>
+                            <Button variant="outline" size="sm" onClick={onInvite}>
+                                <UserPlus size={14} className="mr-2" />
+                                Invite
+                            </Button>
+                        </div>
                         <div className="space-y-2 max-h-60 overflow-y-auto">
                             {members.map(member => (
                                 <div key={member.id} className="flex items-center justify-between p-2 bg-slate-50 rounded-lg">

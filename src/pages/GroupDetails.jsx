@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, Plus, Receipt, UserPlus, Settings, Search, HandCoins, ArrowRight } from 'lucide-react'
+import { ArrowLeft, Plus, Receipt, Settings, Search, HandCoins, ArrowRight } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/input'
 import { useApp } from '../context/AppContext'
@@ -71,22 +71,18 @@ export default function GroupDetails() {
                         {groupBalance >= 0 ? "You are owed" : "You owe"} ${Math.abs(groupBalance).toFixed(2)}
                     </div>
                 </div>
-                <div className="flex gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setIsInviteModalOpen(true)}>
-                        <UserPlus size={16} className="mr-2" />
-                        Invite
-                    </Button>
+                <div className="flex flex-wrap gap-2">
                     <Button variant="outline" size="sm" onClick={() => setIsEditGroupOpen(true)}>
                         <Settings size={16} className="mr-2" />
-                        Edit
+                        Settings
                     </Button>
                     <Button size="sm" onClick={() => { setExpenseToEdit(null); setIsAddExpenseOpen(true); }}>
                         <Plus size={16} className="mr-2" />
-                        Add Expense
+                        Expense
                     </Button>
                     <Button size="sm" variant="outline" onClick={() => openSettleUp()}>
                         <HandCoins size={16} className="mr-2" />
-                        Settle Up
+                        Settle
                     </Button>
                 </div>
             </div>
@@ -287,6 +283,7 @@ export default function GroupDetails() {
                 onClose={() => setIsEditGroupOpen(false)}
                 group={group}
                 members={members}
+                onInvite={() => { setIsEditGroupOpen(false); setIsInviteModalOpen(true) }}
             />
 
             <SettleUpModal
