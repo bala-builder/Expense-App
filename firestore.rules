@@ -1,8 +1,33 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      allow read, write: if request.auth != null;
+
+    // Outbound email queue, processed by the sendMail Cloud Function.
+    // Clients may only enqueue a well-formed invite from the app's own
+    // address. They can never read, edit or delete mail docs (the function
+    // uses the Admin SDK, which bypasses rules).
+    match /mail/{mailId} {
+      allow read, update, delete: if false;
+      allow create: if request.auth != null
+        && request.resource.data.keys().hasOnly(['from', 'to', 'message'])
+        && request.resource.data.keys().hasAll(['from', 'to', 'message'])
+        && request.resource.data.from == 'noreply@balaconnect.com'
+        && request.resource.data.to is string
+        && request.resource.data.to.size() <= 254
+        && request.resource.data.to.matches('^[^@\\s,;]+@[^@\\s,;]+\\.[^@\\s,;]+$')
+        && request.resource.data.message is map
+        && request.resource.data.message.keys().hasOnly(['subject', 'html'])
+        && request.resource.data.message.keys().hasAll(['subject', 'html'])
+        && request.resource.data.message.subject is string
+        && request.resource.data.message.subject.size() <= 200
+        && request.resource.data.message.html is string
+        && request.resource.data.message.html.size() <= 5000;
+    }
+
+    // Everything else: unchanged behaviour (any signed-in user), minus `mail` and `inviteQuota` (server-only),
+    // which must be excluded here because Firestore rules are additive.
+    match /{col}/{document=**} {
+      allow read, write: if request.auth != null && col != 'mail' && col != 'inviteQuota';
     }
   }
 }

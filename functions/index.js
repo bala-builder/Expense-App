@@ -1,4 +1,4 @@
-const functions = require('firebase-functions');
+const functions = require('firebase-functions/v1');
 const admin = require('firebase-admin');
 
 admin.initializeApp();
@@ -140,3 +140,6 @@ exports.onExpenseCreated = functions.firestore
 
         return null;
     });
+
+exports.sendMail = require('./sendMail').sendMail;
+exports.sendInvite = require('./sendInvite').sendInvite;
